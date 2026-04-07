@@ -696,7 +696,7 @@ class ModelAnalyzer:
         mismatch_sessions.sort(key=lambda x: x[1], reverse=True)
         if mismatch_sessions[:5]:
             recs.append(Recommendation(severity="warning",
-                description=f"Top Opus-on-simple: " + ", ".join(f"{p} ({_fmt_cost(c)})" for p, c, _ in mismatch_sessions[:5])))
+                description="Top Opus-on-simple: " + ", ".join(f"{p} ({_fmt_cost(c)})" for p, c, _ in mismatch_sessions[:5])))
         if opus_simple > 10:
             recs.append(Recommendation(severity="warning",
                 description="Consider: /model sonnet for Read/Edit/Bash work, /model opus for Agent/WebSearch/planning",

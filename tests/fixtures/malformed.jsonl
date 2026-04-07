@@ -1,0 +1,6 @@
+{"type":"assistant","message":{"model":"claude-opus-4-6","content":[],"usage":{"input_tokens":100,"output_tokens":10}},"timestamp":"2026-04-05T10:00:00Z","sessionId":"sess-bad","type":"assistant"}
+not valid json at all
+{"type":"user","message":{"content":"hello"}}
+{"type":"assistant","message":{"model":"claude-opus-4-6","usage":{"input_tokens":50}},"timestamp":"2026-04-05T10:00:05Z","sessionId":"sess-bad","type":"assistant"}
+
+{"type":"assistant","message":{"model":"claude-opus-4-6","content":[{"type":"text","text":"ok"}],"usage":{"input_tokens":75,"output_tokens":5,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}},"timestamp":"2026-04-05T10:00:10Z","sessionId":"sess-bad","type":"assistant"}

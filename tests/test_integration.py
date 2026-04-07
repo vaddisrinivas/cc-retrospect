@@ -1,8 +1,8 @@
-"""End-to-end integration tests for cc-sentinel.
+"""End-to-end integration tests for cc-retrospect.
 
 These tests exercise full pipelines: JSONL parsing → analysis → caching →
 hooks → report generation. Each test spins up an isolated temp directory so
-nothing touches the real ~/.claude or ~/.cc-sentinel directories.
+nothing touches the real ~/.claude or ~/.cc-retrospect directories.
 """
 from __future__ import annotations
 
@@ -82,9 +82,9 @@ def _user_msg(session_id: str, ts: str, text: str) -> str:
 @pytest.fixture
 def tmp_env(tmp_path):
     """Return (claude_dir, data_dir, Config) all wired to tmp_path."""
-    from cc_sentinel.core import Config
+    from cc_retrospect.core import Config
     claude_dir = _build_claude_dir(tmp_path)
-    data_dir = tmp_path / ".cc-sentinel"
+    data_dir = tmp_path / ".cc-retrospect"
     data_dir.mkdir()
     config = Config(data_dir=data_dir, claude_dir=claude_dir)
     return claude_dir, data_dir, config
@@ -111,7 +111,7 @@ class TestStopHookPipeline:
         session_id = "integ-stop-001"
         self._setup_session(claude_dir, session_id)
 
-        from cc_sentinel.core import run_stop_hook
+        from cc_retrospect.core import run_stop_hook
         rc = run_stop_hook({"session_id": session_id, "cwd": "/test/myapp"}, config=config)
 
         assert rc == 0
@@ -127,7 +127,7 @@ class TestStopHookPipeline:
         session_id = "integ-stop-002"
         self._setup_session(claude_dir, session_id)
 
-        from cc_sentinel.core import run_stop_hook
+        from cc_retrospect.core import run_stop_hook
         run_stop_hook({"session_id": session_id, "cwd": "/test/myapp"}, config=config)
 
         state_path = data_dir / "state.json"
@@ -139,14 +139,14 @@ class TestStopHookPipeline:
 
     def test_stop_hook_ignores_missing_session_id(self, tmp_env):
         claude_dir, data_dir, config = tmp_env
-        from cc_sentinel.core import run_stop_hook
+        from cc_retrospect.core import run_stop_hook
         rc = run_stop_hook({"cwd": "/test/myapp"}, config=config)  # no session_id
         assert rc == 0
         assert not (data_dir / "sessions.jsonl").exists()
 
     def test_stop_hook_ignores_nonexistent_session_file(self, tmp_env):
         claude_dir, data_dir, config = tmp_env
-        from cc_sentinel.core import run_stop_hook
+        from cc_retrospect.core import run_stop_hook
         rc = run_stop_hook({"session_id": "ghost-session-999", "cwd": "/test/myapp"}, config=config)
         assert rc == 0
         assert not (data_dir / "sessions.jsonl").exists()
@@ -160,7 +160,7 @@ class TestStopHookPipeline:
         existing_state = {"custom_key": "should_survive", "old_cost": 5.0}
         (data_dir / "state.json").write_text(json.dumps(existing_state))
 
-        from cc_sentinel.core import run_stop_hook
+        from cc_retrospect.core import run_stop_hook
         run_stop_hook({"session_id": session_id, "cwd": "/test/myapp"}, config=config)
 
         state = json.loads((data_dir / "state.json").read_text())
@@ -186,7 +186,7 @@ class TestLoadAllSessionsCache:
         claude_dir, data_dir, config = tmp_env
         self._populate_project(claude_dir, "proj-a", "s-001", "2026-04-01T10:00:00Z", "2026-04-01T10:01:00Z")
 
-        from cc_sentinel.core import load_all_sessions
+        from cc_retrospect.core import load_all_sessions
         sessions = load_all_sessions(config)
 
         assert len(sessions) == 1
@@ -197,7 +197,7 @@ class TestLoadAllSessionsCache:
         claude_dir, data_dir, config = tmp_env
         self._populate_project(claude_dir, "proj-a", "s-002", "2026-04-01T10:00:00Z", "2026-04-01T10:02:00Z")
 
-        from cc_sentinel.core import load_all_sessions, analyze_session
+        from cc_retrospect.core import load_all_sessions, analyze_session
         load_all_sessions(config)  # builds cache
 
         # Patch analyze_session so we can tell if it's called again
@@ -207,7 +207,7 @@ class TestLoadAllSessionsCache:
             call_count.append(1)
             return original(*args, **kwargs)
 
-        with patch("cc_sentinel.core.analyze_session", side_effect=counting_analyze):
+        with patch("cc_retrospect.core.analyze_session", side_effect=counting_analyze):
             sessions = load_all_sessions(config)
 
         assert len(sessions) == 1
@@ -217,7 +217,7 @@ class TestLoadAllSessionsCache:
         claude_dir, data_dir, config = tmp_env
         self._populate_project(claude_dir, "proj-a", "s-003", "2026-04-01T10:00:00Z", "2026-04-01T10:01:00Z")
 
-        from cc_sentinel.core import load_all_sessions
+        from cc_retrospect.core import load_all_sessions
         sessions1 = load_all_sessions(config)
         assert len(sessions1) == 1
 
@@ -235,7 +235,7 @@ class TestLoadAllSessionsCache:
         self._populate_project(claude_dir, "-Users-dev-Projects-frontend", "s-front", "2026-04-01T10:00:00Z", "2026-04-01T10:01:00Z")
         self._populate_project(claude_dir, "-Users-dev-Projects-backend", "s-back", "2026-04-01T11:00:00Z", "2026-04-01T11:01:00Z")
 
-        from cc_sentinel.core import load_all_sessions
+        from cc_retrospect.core import load_all_sessions
         sessions = load_all_sessions(config, project_filter="frontend")
 
         assert all("frontend" in s.project for s in sessions)
@@ -266,14 +266,14 @@ class TestMultiProjectAnalysis:
     def test_all_projects_loaded(self, tmp_env):
         claude_dir, data_dir, config = tmp_env
         self._populate(claude_dir)
-        from cc_sentinel.core import load_all_sessions
+        from cc_retrospect.core import load_all_sessions
         sessions = load_all_sessions(config)
         assert len(sessions) == 3
 
     def test_cost_analyzer_covers_all_projects(self, tmp_env):
         claude_dir, data_dir, config = tmp_env
         self._populate(claude_dir)
-        from cc_sentinel.core import load_all_sessions, CostAnalyzer
+        from cc_retrospect.core import load_all_sessions, CostAnalyzer
         sessions = load_all_sessions(config)
         result = CostAnalyzer().analyze(sessions, config)
         text = result.render_text()
@@ -284,7 +284,7 @@ class TestMultiProjectAnalysis:
     def test_total_cost_is_sum_of_sessions(self, tmp_env):
         claude_dir, data_dir, config = tmp_env
         self._populate(claude_dir)
-        from cc_sentinel.core import load_all_sessions
+        from cc_retrospect.core import load_all_sessions
         sessions = load_all_sessions(config)
         total = sum(s.total_cost for s in sessions)
         assert total > 0
@@ -312,7 +312,7 @@ class TestReportGeneration:
     def test_report_file_is_created(self, tmp_env, capsys):
         claude_dir, data_dir, config = tmp_env
         self._populate(claude_dir)
-        from cc_sentinel.core import run_report
+        from cc_retrospect.core import run_report
         rc = run_report({}, config=config)
         assert rc == 0
         reports = list((data_dir / "reports").glob("report-*.md"))
@@ -321,7 +321,7 @@ class TestReportGeneration:
     def test_report_contains_all_sections(self, tmp_env, capsys):
         claude_dir, data_dir, config = tmp_env
         self._populate(claude_dir)
-        from cc_sentinel.core import run_report
+        from cc_retrospect.core import run_report
         run_report({}, config=config)
         report_path = sorted((data_dir / "reports").glob("report-*.md"))[0]
         content = report_path.read_text()
@@ -331,11 +331,11 @@ class TestReportGeneration:
     def test_report_is_valid_markdown(self, tmp_env, capsys):
         claude_dir, data_dir, config = tmp_env
         self._populate(claude_dir)
-        from cc_sentinel.core import run_report
+        from cc_retrospect.core import run_report
         run_report({}, config=config)
         report_path = sorted((data_dir / "reports").glob("report-*.md"))[0]
         content = report_path.read_text()
-        assert content.startswith("# cc-sentinel Report")
+        assert content.startswith("# cc-retrospect Report")
         assert "---" in content  # section separators
 
 
@@ -350,7 +350,7 @@ class TestCustomAnalyzerDiscovery:
         analyzers_dir = data_dir / "analyzers"
         analyzers_dir.mkdir()
         code = textwrap.dedent("""\
-            from cc_sentinel.core import AnalysisResult, Section, Recommendation
+            from cc_retrospect.core import AnalysisResult, Section, Recommendation
 
             class MyCustomAnalyzer:
                 name = "custom-test"
@@ -368,7 +368,7 @@ class TestCustomAnalyzerDiscovery:
     def test_custom_analyzer_is_discovered(self, tmp_env):
         claude_dir, data_dir, config = tmp_env
         self._write_custom_analyzer(data_dir)
-        from cc_sentinel.core import get_analyzers
+        from cc_retrospect.core import get_analyzers
         analyzers = get_analyzers(config)
         names = [a.name for a in analyzers]
         assert "custom-test" in names
@@ -376,7 +376,7 @@ class TestCustomAnalyzerDiscovery:
     def test_custom_analyzer_produces_result(self, tmp_env):
         claude_dir, data_dir, config = tmp_env
         self._write_custom_analyzer(data_dir)
-        from cc_sentinel.core import get_analyzers
+        from cc_retrospect.core import get_analyzers
         analyzers = get_analyzers(config)
         custom = next(a for a in analyzers if a.name == "custom-test")
         result = custom.analyze([], config)
@@ -387,7 +387,7 @@ class TestCustomAnalyzerDiscovery:
         analyzers_dir = data_dir / "analyzers"
         analyzers_dir.mkdir()
         (analyzers_dir / "broken.py").write_text("this is not valid python !!!")
-        from cc_sentinel.core import get_analyzers
+        from cc_retrospect.core import get_analyzers
         # Should not raise — broken file is skipped with a warning
         analyzers = get_analyzers(config)
         names = [a.name for a in analyzers]
@@ -396,7 +396,7 @@ class TestCustomAnalyzerDiscovery:
     def test_builtin_analyzers_still_present_with_custom(self, tmp_env):
         claude_dir, data_dir, config = tmp_env
         self._write_custom_analyzer(data_dir)
-        from cc_sentinel.core import get_analyzers
+        from cc_retrospect.core import get_analyzers
         analyzers = get_analyzers(config)
         names = [a.name for a in analyzers]
         for builtin in ["cost", "habits", "health", "waste", "tips", "compare"]:
@@ -413,7 +413,7 @@ class TestFullSessionLifecycle:
     def test_lifecycle_updates_live_state(self, tmp_env):
         claude_dir, data_dir, config = tmp_env
 
-        from cc_sentinel.core import _init_live_state, _load_live_state, run_post_tool_use
+        from cc_retrospect.core import _init_live_state, _load_live_state, run_post_tool_use
         _init_live_state(config)
         run_post_tool_use({"tool_name": "Read"}, config=config)
         run_post_tool_use({"tool_name": "Edit"}, config=config)
@@ -425,7 +425,7 @@ class TestFullSessionLifecycle:
 
     def test_lifecycle_subagent_tracking(self, tmp_env):
         claude_dir, data_dir, config = tmp_env
-        from cc_sentinel.core import _init_live_state, _load_live_state, run_post_tool_use
+        from cc_retrospect.core import _init_live_state, _load_live_state, run_post_tool_use
         _init_live_state(config)
         for _ in range(5):
             run_post_tool_use({"tool_name": "Agent"}, config=config)
@@ -444,7 +444,7 @@ class TestFullSessionLifecycle:
         ]
         _write_session(claude_dir / "projects", "-lifecycle-proj", session_id, lines)
 
-        from cc_sentinel.core import _init_live_state, run_post_tool_use, run_stop_hook
+        from cc_retrospect.core import _init_live_state, run_post_tool_use, run_stop_hook
         _init_live_state(config)
         run_post_tool_use({"tool_name": "Read"}, config=config)
         run_post_tool_use({"tool_name": "Bash"}, config=config)
@@ -468,11 +468,11 @@ class TestFullSessionLifecycle:
         }
         (data_dir / "state.json").write_text(json.dumps(state))
 
-        from cc_sentinel.core import run_session_start_hook
+        from cc_retrospect.core import run_session_start_hook
         run_session_start_hook({"cwd": "/test/myapp"}, config=config)
 
         out = capsys.readouterr().out
-        assert "cc-sentinel" in out
+        assert "cc-retrospect" in out
         assert "42" in out  # cost
         assert "65" in out or "1h" in out  # duration
 
@@ -483,7 +483,7 @@ class TestFullSessionLifecycle:
         state = {"last_session_cost": 100.0, "last_session_duration_minutes": 90, "last_project": ""}
         (data_dir / "state.json").write_text(json.dumps(state))
 
-        from cc_sentinel.core import run_session_start_hook
+        from cc_retrospect.core import run_session_start_hook
         run_session_start_hook({"cwd": "/any/path"}, config=config)
 
         out = capsys.readouterr().out
@@ -498,14 +498,14 @@ class TestConfigOverrideChain:
     """Pricing in config.env should flow through to cost calculations."""
 
     def test_config_file_overrides_default_pricing(self, tmp_path):
-        from cc_sentinel.core import load_config
+        from cc_retrospect.core import load_config
         cfg_file = tmp_path / "config.env"
         cfg_file.write_text("PRICING_SONNET_INPUT_PER_MTOK=99.0\n")
         cfg = load_config(cfg_file)
         assert cfg.pricing.sonnet.input_per_mtok == 99.0
 
     def test_env_var_overrides_file(self, tmp_path):
-        from cc_sentinel.core import load_config
+        from cc_retrospect.core import load_config
         cfg_file = tmp_path / "config.env"
         cfg_file.write_text("PRICING_SONNET_INPUT_PER_MTOK=50.0\n")
         with patch.dict(os.environ, {"CC_ANALYZE_PRICING_SONNET_INPUT_PER_MTOK": "77.0"}):
@@ -513,7 +513,7 @@ class TestConfigOverrideChain:
         assert cfg.pricing.sonnet.input_per_mtok == 77.0
 
     def test_custom_pricing_affects_cost_computation(self, tmp_path):
-        from cc_sentinel.core import load_config, compute_cost, UsageRecord
+        from cc_retrospect.core import load_config, compute_cost, UsageRecord
         cfg_file = tmp_path / "config.env"
         # Use a very distinctive rate so we can verify
         cfg_file.write_text("PRICING_OPUS_INPUT_PER_MTOK=100.0\n")
@@ -528,7 +528,7 @@ class TestConfigOverrideChain:
         assert abs(cost - 100.0) < 0.01, f"Expected $100.00, got {cost}"
 
     def test_threshold_override_affects_health_check(self, tmp_path):
-        from cc_sentinel.core import load_config, HealthAnalyzer
+        from cc_retrospect.core import load_config, HealthAnalyzer
         cfg_file = tmp_path / "config.env"
         # Set very low threshold so a 10-minute session triggers warning
         cfg_file.write_text("THRESHOLD_LONG_SESSION_MINUTES=5\n")
@@ -549,7 +549,7 @@ class TestFixtureBasedAnalysis:
     """Verify that the new fixture files are analyzed correctly."""
 
     def test_high_cost_session_has_frustration(self):
-        from cc_sentinel.core import analyze_session, default_config
+        from cc_retrospect.core import analyze_session, default_config
         summary = analyze_session(FIXTURES / "high_cost_session.jsonl", "bigapp", default_config())
         assert summary.session_id == "sess-high"
         assert summary.frustration_count >= 3  # ugh, still not working, wtf, nope
@@ -557,33 +557,33 @@ class TestFixtureBasedAnalysis:
         assert "github.com" in summary.webfetch_domains or "api.github.com" in summary.webfetch_domains
 
     def test_high_cost_session_total_tokens(self):
-        from cc_sentinel.core import analyze_session, default_config
+        from cc_retrospect.core import analyze_session, default_config
         summary = analyze_session(FIXTURES / "high_cost_session.jsonl", "bigapp", default_config())
         # Sum of input_tokens: 50000+80000+120000+90000+100000 = 440000
         assert summary.total_input_tokens == 440_000
         assert summary.total_cost > 0
 
     def test_bash_chain_session_detects_chain(self):
-        from cc_sentinel.core import analyze_session, default_config
+        from cc_retrospect.core import analyze_session, default_config
         summary = analyze_session(FIXTURES / "bash_chain_session.jsonl", "pipeline", default_config())
         assert summary.session_id == "sess-chain"
         chain_names = [name for name, length in summary.tool_chains]
         assert "Bash" in chain_names
 
     def test_bash_chain_session_model_is_sonnet(self):
-        from cc_sentinel.core import analyze_session, default_config
+        from cc_retrospect.core import analyze_session, default_config
         summary = analyze_session(FIXTURES / "bash_chain_session.jsonl", "pipeline", default_config())
         assert "claude-sonnet-4-6" in summary.model_breakdown
 
     def test_bash_chain_waste_analyzer_flags_chain(self):
-        from cc_sentinel.core import analyze_session, WasteAnalyzer, default_config
+        from cc_retrospect.core import analyze_session, WasteAnalyzer, default_config
         summary = analyze_session(FIXTURES / "bash_chain_session.jsonl", "pipeline", default_config())
         result = WasteAnalyzer().analyze([summary], default_config())
         descriptions = [r.description for r in result.recommendations]
         assert any("chain" in d.lower() or "consecutive" in d.lower() for d in descriptions)
 
     def test_high_cost_waste_analyzer_flags_github_webfetch(self):
-        from cc_sentinel.core import analyze_session, WasteAnalyzer, default_config
+        from cc_retrospect.core import analyze_session, WasteAnalyzer, default_config
         summary = analyze_session(FIXTURES / "high_cost_session.jsonl", "bigapp", default_config())
         result = WasteAnalyzer().analyze([summary], default_config())
         descriptions = [r.description for r in result.recommendations]
@@ -598,7 +598,7 @@ class TestRenderFormats:
     """All three render formats should produce consistent, valid output."""
 
     def _get_result(self):
-        from cc_sentinel.core import CostAnalyzer, default_config
+        from cc_retrospect.core import CostAnalyzer, default_config
         from tests.test_core_detectors import _make_summary
         sessions = [_make_summary(total_cost=50.0), _make_summary(total_cost=30.0, session_id="s2")]
         return CostAnalyzer().analyze(sessions, default_config())
@@ -621,7 +621,7 @@ class TestRenderFormats:
         assert "recommendations" in parsed
 
     def test_all_analyzers_render_all_formats(self):
-        from cc_sentinel.core import (
+        from cc_retrospect.core import (
             CostAnalyzer, HabitsAnalyzer, HealthAnalyzer,
             WasteAnalyzer, TipsAnalyzer, CompareAnalyzer, default_config,
         )
@@ -643,7 +643,7 @@ class TestSessionSummaryRoundtrip:
     """SessionSummary should survive a serialize → write → read → deserialize cycle."""
 
     def test_full_roundtrip_via_file(self, tmp_path):
-        from cc_sentinel.core import (
+        from cc_retrospect.core import (
             analyze_session, default_config,
             session_summary_to_dict, session_summary_from_dict,
         )
@@ -653,7 +653,7 @@ class TestSessionSummaryRoundtrip:
         with open(cache, "w") as f:
             f.write(json.dumps(session_summary_to_dict(summary)) + "\n")
 
-        from cc_sentinel.core import iter_jsonl
+        from cc_retrospect.core import iter_jsonl
         entries = list(iter_jsonl(cache))
         assert len(entries) == 1
         restored = session_summary_from_dict(entries[0])
@@ -665,7 +665,7 @@ class TestSessionSummaryRoundtrip:
         assert restored.webfetch_domains == summary.webfetch_domains
 
     def test_high_cost_session_roundtrip(self, tmp_path):
-        from cc_sentinel.core import (
+        from cc_retrospect.core import (
             analyze_session, default_config,
             session_summary_to_dict, session_summary_from_dict,
         )
@@ -700,7 +700,7 @@ class TestDispatchRouting:
             capture_output=True, text=True,
         )
         assert result.returncode == 0
-        assert "cc-sentinel" in result.stdout.lower() or "hint" in result.stdout.lower()
+        assert "cc-retrospect" in result.stdout.lower() or "hint" in result.stdout.lower()
 
     def test_dispatch_unknown_command_exits_nonzero(self):
         result = subprocess.run(
@@ -722,7 +722,7 @@ class TestIterProjectSessions:
         path = _write_session(claude_dir / "projects", "proj-one", "sess-a", [
             _user_msg("sess-a", "2026-04-01T10:00:00Z", "hi"),
         ])
-        from cc_sentinel.core import iter_project_sessions
+        from cc_retrospect.core import iter_project_sessions
         results = list(iter_project_sessions(claude_dir))
         assert len(results) == 1
         assert results[0][0] == "proj-one"
@@ -734,14 +734,14 @@ class TestIterProjectSessions:
             _write_session(claude_dir / "projects", proj, f"s-{proj}", [
                 _user_msg(f"s-{proj}", "2026-04-01T10:00:00Z", "hi"),
             ])
-        from cc_sentinel.core import iter_project_sessions
+        from cc_retrospect.core import iter_project_sessions
         results = list(iter_project_sessions(claude_dir))
         assert len(results) == 3
         project_names = {r[0] for r in results}
         assert project_names == {"proj-a", "proj-b", "proj-c"}
 
     def test_returns_nothing_for_missing_projects_dir(self, tmp_path):
-        from cc_sentinel.core import iter_project_sessions
+        from cc_retrospect.core import iter_project_sessions
         results = list(iter_project_sessions(tmp_path / "nonexistent"))
         assert results == []
 
@@ -751,7 +751,7 @@ class TestIterProjectSessions:
         proj_dir.mkdir(parents=True)
         (proj_dir / "notes.txt").write_text("not a session")
         (proj_dir / "sess-x.jsonl").write_text(_user_msg("sess-x", "2026-04-01T10:00:00Z", "hi") + "\n")
-        from cc_sentinel.core import iter_project_sessions
+        from cc_retrospect.core import iter_project_sessions
         results = list(iter_project_sessions(claude_dir))
         assert len(results) == 1
         assert results[0][1].suffix == ".jsonl"
@@ -766,7 +766,7 @@ class TestPreToolHintsIntegration:
 
     def test_webfetch_api_github_also_triggers_hint(self, tmp_env, capsys):
         claude_dir, data_dir, config = tmp_env
-        from cc_sentinel.core import run_pre_tool_use, _init_live_state
+        from cc_retrospect.core import run_pre_tool_use, _init_live_state
         _init_live_state(config)
         run_pre_tool_use({
             "tool_name": "WebFetch",
@@ -778,7 +778,7 @@ class TestPreToolHintsIntegration:
     def test_hints_disabled_suppresses_output(self, tmp_env, capsys):
         claude_dir, data_dir, config = tmp_env
         config.hints.pre_tool = False
-        from cc_sentinel.core import run_pre_tool_use, _init_live_state
+        from cc_retrospect.core import run_pre_tool_use, _init_live_state
         _init_live_state(config)
         run_pre_tool_use({
             "tool_name": "WebFetch",
@@ -789,7 +789,7 @@ class TestPreToolHintsIntegration:
 
     def test_bash_chain_resets_after_different_tool(self, tmp_env, capsys):
         claude_dir, data_dir, config = tmp_env
-        from cc_sentinel.core import run_pre_tool_use, _init_live_state, _load_live_state
+        from cc_retrospect.core import run_pre_tool_use, _init_live_state, _load_live_state
         _init_live_state(config)
         for _ in range(5):
             run_pre_tool_use({"tool_name": "Bash", "tool_input": {"command": "ls"}}, config=config)
@@ -802,7 +802,7 @@ class TestPreToolHintsIntegration:
 
     def test_post_tool_tracks_webfetch_github(self, tmp_env):
         claude_dir, data_dir, config = tmp_env
-        from cc_sentinel.core import run_post_tool_use, _init_live_state, _load_live_state
+        from cc_retrospect.core import run_post_tool_use, _init_live_state, _load_live_state
         _init_live_state(config)
         run_post_tool_use({
             "tool_name": "WebFetch",

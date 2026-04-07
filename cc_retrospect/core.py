@@ -1,4 +1,4 @@
-"""cc-sentinel core — all business logic for Claude Code session analysis.
+"""cc-retrospect core — all business logic for Claude Code session analysis.
 
 Pure Python 3.10+, stdlib only. Extensible analyzer protocol.
 """
@@ -17,16 +17,16 @@ from typing import Iterator, Protocol, runtime_checkable
 from urllib.parse import urlparse
 
 # ---------------------------------------------------------------------------
-# Logger — writes to stderr, level controlled by CC_SENTINEL_LOG_LEVEL
+# Logger — writes to stderr, level controlled by CC_RETROSPECT_LOG_LEVEL
 # ---------------------------------------------------------------------------
 
 def _make_logger() -> logging.Logger:
-    log = logging.getLogger("cc_sentinel")
+    log = logging.getLogger("cc_retrospect")
     if not log.handlers:
         handler = logging.StreamHandler(sys.stderr)
-        handler.setFormatter(logging.Formatter("[cc-sentinel] %(levelname)s %(message)s"))
+        handler.setFormatter(logging.Formatter("[cc-retrospect] %(levelname)s %(message)s"))
         log.addHandler(handler)
-    level_name = os.environ.get("CC_SENTINEL_LOG_LEVEL", "WARNING").upper()
+    level_name = os.environ.get("CC_RETROSPECT_LOG_LEVEL", "WARNING").upper()
     log.setLevel(getattr(logging, level_name, logging.WARNING))
     return log
 
@@ -88,7 +88,7 @@ class Config:
     pricing: ModelPricing = field(default_factory=ModelPricing)
     thresholds: ThresholdsConfig = field(default_factory=ThresholdsConfig)
     hints: HintsConfig = field(default_factory=HintsConfig)
-    data_dir: Path = field(default_factory=lambda: Path.home() / ".cc-sentinel")
+    data_dir: Path = field(default_factory=lambda: Path.home() / ".cc-retrospect")
     claude_dir: Path = field(default_factory=lambda: Path.home() / ".claude")
 
 
@@ -1163,7 +1163,7 @@ def run_report(payload: dict, config: Config | None = None) -> int:
     analyzers = [CostAnalyzer(), HabitsAnalyzer(), HealthAnalyzer(), WasteAnalyzer(), TipsAnalyzer(), CompareAnalyzer()]
 
     now = datetime.now()
-    parts: list[str] = [f"# cc-sentinel Report\n\nGenerated: {now.isoformat()}\n"]
+    parts: list[str] = [f"# cc-retrospect Report\n\nGenerated: {now.isoformat()}\n"]
     for a in analyzers:
         result = a.analyze(sessions, config)
         parts.append(result.render_markdown())
@@ -1185,13 +1185,13 @@ def run_hints(payload: dict, config: Config | None = None) -> int:
     config = config or load_config()
 
     lines = [
-        "## cc-sentinel Hint Settings",
+        "## cc-retrospect Hint Settings",
         "",
         f"  session_start   {'on ' if config.hints.session_start else 'off'}  — last-session summary shown at session start  (HINTS_SESSION_START)",
         f"  pre_tool        {'on ' if config.hints.pre_tool else 'off'}  — inline hints before tool calls                (HINTS_PRE_TOOL)",
         f"  post_tool       {'on ' if config.hints.post_tool else 'off'}  — compaction nudge + subagent warnings          (HINTS_POST_TOOL)",
         "",
-        "To change, add to ~/.cc-sentinel/config.env:",
+        "To change, add to ~/.cc-retrospect/config.env:",
         "  HINTS_SESSION_START=true",
         "  HINTS_PRE_TOOL=true",
         "  HINTS_POST_TOOL=true",
@@ -1346,7 +1346,7 @@ def run_session_start_hook(payload: dict, config: Config | None = None) -> int:
                 logger.debug("Could not read last report for session start hints: %s", e)
 
     if lines and config.hints.session_start:
-        print("[cc-sentinel] " + " ".join(lines))
+        print("[cc-retrospect] " + " ".join(lines))
 
     # Initialize live session state for PostToolUse tracking
     _init_live_state(config)
@@ -1454,7 +1454,7 @@ def run_pre_tool_use(payload: dict, config: Config | None = None) -> int:
 
     if hints and config.hints.pre_tool:
         for hint in hints:
-            print(f"[cc-sentinel] {hint}")
+            print(f"[cc-retrospect] {hint}")
 
     return 0
 
@@ -1506,6 +1506,6 @@ def run_post_tool_use(payload: dict, config: Config | None = None) -> int:
 
     if hints and config.hints.post_tool:
         for hint in hints:
-            print(f"[cc-sentinel] {hint}")
+            print(f"[cc-retrospect] {hint}")
 
     return 0

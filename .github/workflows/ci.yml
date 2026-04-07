@@ -31,7 +31,7 @@ jobs:
         run: |
           pytest tests/ -v \
             --tb=short \
-            --cov=cc_sentinel \
+            --cov=cc_retrospect \
             --cov-report=term-missing \
             --cov-report=xml \
             -p no:cacheprovider
@@ -59,7 +59,7 @@ jobs:
         run: pip install pyflakes
 
       - name: Run pyflakes on source
-        run: python -m pyflakes cc_sentinel/
+        run: python -m pyflakes cc_retrospect/
 
       - name: Run pyflakes on tests
         run: python -m pyflakes tests/
@@ -84,19 +84,19 @@ jobs:
 
       - name: Dispatch cost with empty project dir
         env:
-          # Point cc-sentinel at a tmp dir so nothing tries to read ~/.claude
-          CC_ANALYZE_DATA_DIR: /tmp/cc-sentinel-smoke
+          # Point cc-retrospect at a tmp dir so nothing tries to read ~/.claude
+          CC_ANALYZE_DATA_DIR: /tmp/cc-retrospect-smoke
         run: |
-          mkdir -p /tmp/cc-sentinel-smoke
+          mkdir -p /tmp/cc-retrospect-smoke
           # cost command should handle zero sessions gracefully
           python -c "
           import sys, os, json
           sys.path.insert(0, '.')
-          from cc_sentinel.core import Config, CostAnalyzer
+          from cc_retrospect.core import Config, CostAnalyzer
           from pathlib import Path
           cfg = Config(
-            data_dir=Path('/tmp/cc-sentinel-smoke'),
-            claude_dir=Path('/tmp/cc-sentinel-smoke/claude'),
+            data_dir=Path('/tmp/cc-retrospect-smoke'),
+            claude_dir=Path('/tmp/cc-retrospect-smoke/claude'),
           )
           result = CostAnalyzer().analyze([], cfg)
           assert result is not None

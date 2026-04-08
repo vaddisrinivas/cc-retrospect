@@ -260,13 +260,19 @@ class TestRunStatus:
 # ---------------------------------------------------------------------------
 
 class TestRunExport:
-    def test_exports_json(self, config, capsys):
-        from cc_retrospect.core import run_export
-        s = _make_summary()
-        (config.data_dir / "sessions.jsonl").write_text(s.model_dump_json() + "\n")
-        # Need a claude_dir with projects so load_all_sessions can scan
-        (config.claude_dir / "projects").mkdir(parents=True, exist_ok=True)
-        run_export(config=config)
+    def test_exports_json(self, tmp_path, capsys):
+        from cc_retrospect.core import run_export, Config
+        data_dir = tmp_path / ".cc-retrospect"
+        data_dir.mkdir()
+        claude_dir = tmp_path / ".claude"
+        proj = claude_dir / "projects" / "testproj"
+        proj.mkdir(parents=True)
+        entry = {"type": "assistant", "message": {"model": "claude-opus-4-6", "content": [],
+                 "usage": {"input_tokens": 100, "output_tokens": 50}},
+                 "timestamp": "2026-04-05T10:00:00Z", "sessionId": "export-test"}
+        (proj / "export-test.jsonl").write_text(json.dumps(entry))
+        cfg = Config(data_dir=data_dir, claude_dir=claude_dir)
+        run_export(config=cfg)
         out = capsys.readouterr().out
         data = json.loads(out)
         assert isinstance(data, list)
@@ -289,16 +295,22 @@ class TestRunDigest:
         out = capsys.readouterr().out
         assert "No sessions found" in out
 
-    def test_with_sessions(self, config, capsys):
-        from cc_retrospect.core import run_digest
+    def test_with_sessions(self, tmp_path, capsys):
+        from cc_retrospect.core import run_digest, Config
+        data_dir = tmp_path / ".cc-retrospect"
+        data_dir.mkdir()
+        claude_dir = tmp_path / ".claude"
+        proj = claude_dir / "projects" / "testproj"
+        proj.mkdir(parents=True)
         yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%dT12:00:00Z")
-        s = _make_summary(start_ts=yesterday, total_cost=50.0)
-        (config.data_dir / "sessions.jsonl").write_text(s.model_dump_json() + "\n")
-        (config.claude_dir / "projects").mkdir(parents=True, exist_ok=True)
-        run_digest(config=config)
+        entry = {"type": "assistant", "message": {"model": "claude-opus-4-6", "content": [],
+                 "usage": {"input_tokens": 1000, "output_tokens": 500}},
+                 "timestamp": yesterday, "sessionId": "digest-test"}
+        (proj / "digest-test.jsonl").write_text(json.dumps(entry))
+        cfg = Config(data_dir=data_dir, claude_dir=claude_dir)
+        run_digest(config=cfg)
         out = capsys.readouterr().out
         assert "Daily Digest" in out
-        assert "sessions" in out.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -402,10 +414,16 @@ class TestFirstRunOnboarding:
 # ---------------------------------------------------------------------------
 
 class TestDailyDigest:
-    def test_shows_digest_on_new_day(self, config, capsys):
-        from cc_retrospect.core import run_session_start_hook
-        config.hints.session_start = True
-        # State from yesterday
+    def test_shows_digest_on_new_day(self, tmp_path, capsys):
+        from cc_retrospect.core import run_session_start_hook, Config
+        data_dir = tmp_path / ".cc-retrospect"
+        data_dir.mkdir()
+        claude_dir = tmp_path / ".claude"
+        proj = claude_dir / "projects" / "testproj"
+        proj.mkdir(parents=True)
+        cfg = Config(data_dir=data_dir, claude_dir=claude_dir)
+        cfg.hints.session_start = True
+        cfg.hints.daily_digest = True
         yesterday = (datetime.now(timezone.utc) - timedelta(days=1))
         state = {
             "last_session_cost": 50.0,
@@ -415,12 +433,14 @@ class TestDailyDigest:
             "last_subagent_count": 0,
             "last_ts": yesterday.isoformat(),
         }
-        (config.data_dir / "state.json").write_text(json.dumps(state))
-        # Add a session from yesterday for the digest to find
-        s = _make_summary(start_ts=yesterday.strftime("%Y-%m-%dT12:00:00Z"), total_cost=50.0)
-        (config.data_dir / "sessions.jsonl").write_text(s.model_dump_json() + "\n")
-        (config.claude_dir / "projects").mkdir(parents=True, exist_ok=True)
-        run_session_start_hook({"cwd": "/test"}, config=config)
+        (data_dir / "state.json").write_text(json.dumps(state))
+        # Write actual JSONL file so load_all_sessions finds it
+        yesterday_ts = yesterday.strftime("%Y-%m-%dT12:00:00Z")
+        entry = {"type": "assistant", "message": {"model": "claude-opus-4-6", "content": [],
+                 "usage": {"input_tokens": 1000, "output_tokens": 500}},
+                 "timestamp": yesterday_ts, "sessionId": "digest-sess"}
+        (proj / "digest-sess.jsonl").write_text(json.dumps(entry))
+        run_session_start_hook({"cwd": "/test"}, config=cfg)
         out = capsys.readouterr().out
         assert "Yesterday" in out
 

@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import sys
+import tempfile
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -23,6 +24,26 @@ if not logger.handlers:
     _h.setFormatter(logging.Formatter("[cc-retrospect] %(levelname)s %(message)s"))
     logger.addHandler(_h)
 logger.setLevel(getattr(logging, os.environ.get("CC_RETROSPECT_LOG_LEVEL", "WARNING").upper(), logging.WARNING))
+
+
+# --- Atomic file operations ---
+
+def _atomic_write_json(path: Path, data: dict) -> None:
+    """Write JSON atomically using temp file + os.replace to avoid corruption."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, delete=False, suffix='.tmp', encoding='utf-8') as f:
+        json.dump(data, f, indent=2)
+        temp_path = f.name
+    try:
+        os.replace(temp_path, path)
+    except Exception:
+        Path(temp_path).unlink(missing_ok=True)
+        raise
+
+
+def _is_valid_session_id(session_id: str) -> bool:
+    """Validate session ID format."""
+    return bool(re.match(r'^[a-zA-Z0-9_-]+$', session_id))
 
 
 
@@ -777,6 +798,7 @@ def get_analyzers(config: Config) -> list:
     import importlib.util
     for py_file in custom_dir.glob("*.py"):
         try:
+            logger.warning("Loading custom analyzer from %s — ensure this is trusted code", py_file)
             spec = importlib.util.spec_from_file_location(py_file.stem, py_file)
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
@@ -859,8 +881,8 @@ def _init_live_state(config: Config) -> None:
 def _load_live_state(config: Config) -> LiveSessionState:
     path = _live_state_path(config)
     if path.exists():
-        try: return LiveSessionState.model_validate_json(path.read_text())
-        except Exception: pass
+        try: return LiveSessionState.model_validate_json(path.read_text(encoding="utf-8"))
+        except Exception as e: logger.debug("Failed to load live state: %s", e)
     return LiveSessionState()
 
 
@@ -1043,9 +1065,10 @@ class TrendAnalyzer:
         if not weeks:
             return AnalysisResult(title="Trends", recommendations=[
                 Recommendation(severity="info", description="No trend data yet. Trends are recorded weekly via the stop hook.")])
+        sorted_weeks = sorted(weeks, key=lambda x: x.get("week", ""))[-8:]
         rows = []
         prev: dict | None = None
-        for w in sorted(weeks, key=lambda x: x.get("week", ""))[-8:]:
+        for w in sorted_weeks:
             wk = w.get("week", "?")
             cost = w.get("cost", 0)
             sess = w.get("sessions", 0)
@@ -1057,8 +1080,8 @@ class TrendAnalyzer:
             rows.append((wk, f"{_fmt_cost(cost)}, {sess} sessions, {eff}% efficiency{delta}"))
             prev = w
         recs = []
-        if len(weeks) >= 2:
-            latest, prior = weeks[-1], weeks[-2]
+        if len(sorted_weeks) >= 2:
+            latest, prior = sorted_weeks[-1], sorted_weeks[-2]
             if latest.get("cost", 0) < prior.get("cost", 0) * 0.8:
                 recs.append(Recommendation(severity="info", description="Spending trending down — good progress."))
             elif latest.get("cost", 0) > prior.get("cost", 0) * 1.3:
@@ -1265,6 +1288,9 @@ def run_stop_hook(payload: dict, *, config: Config | None = None) -> int:
     session_id = payload.get("session_id", "")
     cwd = payload.get("cwd", "")
     if not session_id or not cwd: return 0
+    if not _is_valid_session_id(session_id):
+        logger.warning("Invalid session ID format: %s", session_id)
+        return 0
     projects_dir = config.claude_dir / "projects"
     jsonl_path = next(
         (pdir / f"{session_id}.jsonl" for pdir in projects_dir.iterdir()
@@ -1273,13 +1299,24 @@ def run_stop_hook(payload: dict, *, config: Config | None = None) -> int:
     if not jsonl_path: return 0
     summary = analyze_session(jsonl_path, jsonl_path.parent.name, config)
     config.data_dir.mkdir(parents=True, exist_ok=True)
-    with open(config.data_dir / "sessions.jsonl", "a", encoding="utf-8") as f:
-        f.write(summary.model_dump_json() + "\n")
+    # Check if session already in cache before appending
+    cache_path = config.data_dir / "sessions.jsonl"
+    if cache_path.exists():
+        existing_ids = set()
+        try:
+            for entry in iter_jsonl(cache_path):
+                s = SessionSummary.model_validate(entry)
+                existing_ids.add(s.session_id)
+        except Exception as e:
+            logger.debug("Failed to read existing cache entries: %s", e)
+    if summary.session_id not in existing_ids:
+        with open(cache_path, "a", encoding="utf-8") as f:
+            f.write(summary.model_dump_json() + "\n")
     state_path = config.data_dir / "state.json"
     state = {}
     if state_path.exists():
-        try: state = json.loads(state_path.read_text())
-        except json.JSONDecodeError: pass
+        try: state = json.loads(state_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e: logger.debug("Failed to parse state.json: %s", e)
     state.update({
         "last_session_id": summary.session_id, "last_project": summary.project,
         "last_session_cost": summary.total_cost, "last_session_duration_minutes": summary.duration_minutes,
@@ -1293,7 +1330,10 @@ def run_stop_hook(payload: dict, *, config: Config | None = None) -> int:
     else:
         state["today_date"] = today
         state["today_cost"] = summary.total_cost
-    state_path.write_text(json.dumps(state, indent=2))
+    try:
+        _atomic_write_json(state_path, state)
+    except Exception as e:
+        logger.debug("Failed to write state.json: %s", e)
     # Waste flags on session end (configurable)
     waste_flags = []
     gh_calls = sum(c for d, c in summary.webfetch_domains.items() if "github.com" in d)
@@ -1329,8 +1369,8 @@ def run_stop_hook(payload: dict, *, config: Config | None = None) -> int:
             logger.debug("Auto-refresh learn failed: %s", e)
 
     # Budget alert
-    if state["today_cost"] > config.thresholds.daily_cost_warning:
-        print(f"{config.messages.prefix} {config.messages.budget_alert.format(cost=_fmt_cost(state['today_cost']), threshold=_fmt_cost(config.thresholds.daily_cost_warning))}", file=sys.stderr)
+    if state.get("today_cost", 0) > config.thresholds.daily_cost_warning:
+        print(f"{config.messages.prefix} {config.messages.budget_alert.format(cost=_fmt_cost(state.get('today_cost', 0)), threshold=_fmt_cost(config.thresholds.daily_cost_warning))}", file=sys.stderr)
     # Update weekly trends
     try: _update_trends(config)
     except Exception as e: logger.debug("Trend update failed: %s", e)
@@ -1353,14 +1393,18 @@ def run_session_start_hook(payload: dict, *, config: Config | None = None) -> in
             else:
                 print(f"{m.prefix} {m.welcome_no_data}")
             config.data_dir.mkdir(parents=True, exist_ok=True)
-            state_path.write_text(json.dumps({"first_run": datetime.now(timezone.utc).isoformat()}))
+            state = {"first_run": datetime.now(timezone.utc).isoformat()}
+            try:
+                _atomic_write_json(state_path, state)
+            except Exception as e:
+                logger.debug("Failed to write initial state: %s", e)
         except Exception as e:
             logger.debug("First-run onboarding failed: %s", e)
         _init_live_state(config)
         return 0
     if not state_path.exists(): return 0
-    try: state = json.loads(state_path.read_text())
-    except (json.JSONDecodeError, OSError): return 0
+    try: state = json.loads(state_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e: logger.debug("Failed to read state.json: %s", e); return 0
     last_project = state.get("last_project", "")
     if last_project:
         if cwd.replace("/", "-").lstrip("-") != last_project.lstrip("-"):
@@ -1389,14 +1433,14 @@ def run_session_start_hook(payload: dict, *, config: Config | None = None) -> in
         if reports:
             try:
                 waste_tips, in_waste = [], False
-                for line in reports[0].read_text().splitlines():
+                for line in reports[0].read_text(encoding="utf-8").splitlines():
                     if "Waste" in line and line.startswith("#"): in_waste = True
                     elif in_waste and line.startswith("#"): break
                     elif in_waste and line.strip().startswith(("- **[!]**", "- [~]", "- [i]")):
                         waste_tips.append(line.strip().lstrip("- ").lstrip("*[]!~i* "))
                         if len(waste_tips) >= 2: break
                 if waste_tips: lines.append("Top waste: " + "; ".join(waste_tips))
-            except OSError: pass
+            except OSError as e: logger.debug("Failed to read waste tips: %s", e)
     # Daily health check (once per day, configurable)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if config.hints.daily_health and state.get("last_health_date") != today:
@@ -1421,7 +1465,10 @@ def run_session_start_hook(payload: dict, *, config: Config | None = None) -> in
             if not hooks_ok:
                 lines.append(m.health_no_data)
             state["last_health_date"] = today
-            state_path.write_text(json.dumps(state, indent=2))
+            try:
+                _atomic_write_json(state_path, state)
+            except Exception as e:
+                logger.debug("Failed to write state after health check: %s", e)
         except Exception as e:
             logger.debug("Daily health check failed: %s", e)
 
@@ -1790,7 +1837,8 @@ def analyze_user_messages(config: Config) -> UserProfile:
                     total_cache_create += usage.get("cache_creation_input_tokens", 0)
                     total_cache_read += usage.get("cache_read_input_tokens", 0)
                     if model:
-                        c = usage.get("input_tokens", 0) / 1e6 * 15 + usage.get("output_tokens", 0) / 1e6 * 75
+                        pricing = _pricing_for_model(model, config.pricing)
+                        c = usage.get("input_tokens", 0) / 1e6 * pricing.input_per_mtok + usage.get("output_tokens", 0) / 1e6 * pricing.output_per_mtok
                         model_costs[model] += c
 
                 # Tool extraction
@@ -2022,11 +2070,11 @@ def _should_show_daily_digest(config: Config) -> bool:
     """True if this is the first session of a new day."""
     state_path = config.data_dir / "state.json"
     if not state_path.exists(): return False
-    try: state = json.loads(state_path.read_text())
+    try: state = json.loads(state_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError): return False
     last_ts = state.get("last_ts", "")
     if not last_ts: return False
     try:
-        last_date = datetime.fromisoformat(last_ts).date()
+        last_date = datetime.fromisoformat(last_ts.replace("Z", "+00:00")).date()
         return last_date < datetime.now(timezone.utc).date()
     except (ValueError, TypeError): return False

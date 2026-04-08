@@ -27,5 +27,6 @@ Use this format:
 - [ ] (P2) cleanup skill: document actual paths to scan (subagent logs, telemetry, worktrees)
 - [ ] (P2) SKILL.md (analyze): shell fallback won't work on Windows
 - [ ] (P2) hooks.json: verify PreCompact/PostCompact event names actually fire in Claude Code
+- [ ] (P2) hybrid skills: /waste, /savings, /model, /health, /digest, /learn — Python runs first for precision, skill layer interprets and adds reasoning (per-project recommendations, "why" explanations, correlation spotting)
 - [ ] (P3) add py.typed marker for downstream type checking
 - [ ] (P3) add GitHub release workflow (tag → build → publish)

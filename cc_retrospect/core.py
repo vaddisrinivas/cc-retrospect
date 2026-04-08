@@ -1012,7 +1012,6 @@ def _update_trends(config: Config) -> None:
         return
     total_cost = sum(s.total_cost for s in week_sessions)
     complex_tools = {"Agent", "EnterPlanMode", "WebSearch", "WebFetch"}
-    opus_total = sum(s.model_breakdown.get("claude-opus-4-6", 0) for s in week_sessions)
     opus_simple = sum(s.model_breakdown.get("claude-opus-4-6", 0) for s in week_sessions
                       if not any(t in s.tool_counts for t in complex_tools))
     all_model_cost = sum(s.total_cost for s in week_sessions)

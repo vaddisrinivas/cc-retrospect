@@ -3,7 +3,7 @@
 __version__ = "2.1.0"
 
 try:
-    from cc_retrospect.core import (
+    from cc_retrospect.core import (  # noqa: F401
         AnalysisResult,
         Config,
         Recommendation,

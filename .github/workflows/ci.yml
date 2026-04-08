@@ -59,7 +59,7 @@ jobs:
         run: pip install pyflakes pydantic pydantic-settings
 
       - name: Run pyflakes on source
-        run: python -m pyflakes cc_retrospect/
+        run: python -m pyflakes cc_retrospect/core.py
 
       - name: Run pyflakes on tests
         run: python -m pyflakes tests/

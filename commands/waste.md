@@ -1,5 +1,5 @@
 ---
-description: Detect wasted tokens — WebFetch to GitHub, tool chains, mega prompts, model mismatch.
+description: Detect token waste — GitHub fetches, repetitive tool calls, oversized prompts, wrong model choice.
 ---
 
 ```bash

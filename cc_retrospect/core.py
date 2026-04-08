@@ -391,10 +391,10 @@ class CostAnalyzer:
 
 class WasteAnalyzer:
     name = "waste"
-    description = "Detect wasted tokens: WebFetch to GitHub, duplicate reads, tool chains, model mismatch"
+    description = "Detect token waste: GitHub fetches via WebFetch, repetitive tool calls, oversized prompts, wrong model choice"
 
     def analyze(self, sessions: list[SessionSummary], config: Config) -> AnalysisResult:
-        if not sessions: return AnalysisResult(title="Waste Analysis")
+        if not sessions: return AnalysisResult(title="Token Waste")
         recs, rows = [], []
         domain_totals: Counter = Counter()
         domain_sessions: Counter = Counter()
@@ -404,26 +404,26 @@ class WasteAnalyzer:
                     domain_totals[domain] += count; domain_sessions[domain] += 1
         for domain, count in domain_totals.items():
             recs.append(Recommendation(severity="warning", description=f"{count} WebFetch calls to {domain} across {domain_sessions[domain]} sessions. Use `gh` CLI instead.", estimated_savings=f"~{_fmt_tokens(count * 5000)} tokens"))
-        rows.append(("WebFetch to waste domains", str(sum(domain_totals.values()))))
+        rows.append(("WebFetch to GitHub (use gh CLI)", str(sum(domain_totals.values()))))
         all_chains: dict[str, list[int]] = defaultdict(list)
         for s in sessions:
             for tool, length in s.tool_chains:
                 if length >= config.thresholds.tool_chain_threshold: all_chains[tool].append(length)
         for tool, lengths in sorted(all_chains.items(), key=lambda x: sum(x[1]), reverse=True):
             recs.append(Recommendation(severity="info", description=f"{len(lengths)} consecutive {tool} chains (longest: {max(lengths)}). Combine calls or use scripts."))
-        rows.append(("Long tool chains", str(sum(len(v) for v in all_chains.values()))))
+        rows.append(("Repetitive tool chains", str(sum(len(v) for v in all_chains.values()))))
         total_mega = sum(s.mega_prompt_count for s in sessions)
         if total_mega > 5:
-            recs.append(Recommendation(severity="warning", description=f"{total_mega} mega prompts (>{config.thresholds.mega_prompt_chars} chars). Use file references instead of pasting content."))
-        rows.append(("Mega prompts", str(total_mega)))
+            recs.append(Recommendation(severity="warning", description=f"{total_mega} oversized prompts (>{config.thresholds.mega_prompt_chars} chars). Use file references instead of pasting content."))
+        rows.append(("Oversized prompts", str(total_mega)))
         complex_tools = {"Agent", "EnterPlanMode", "WebSearch", "WebFetch"}
         for s in sessions:
             opus_cost = s.model_breakdown.get("claude-opus-4-6", 0)
             if opus_cost > 50 and not any(t in s.tool_counts for t in complex_tools):
                 recs.append(Recommendation(severity="warning", description=f"Session {s.session_id[:8]}... used Opus ({_fmt_cost(opus_cost)}) for simple tasks. Sonnet would be ~5x cheaper.", estimated_savings=_fmt_cost(opus_cost * 0.8)))
                 break
-        rows.append(("Model mismatch candidates", str(sum(1 for s in sessions if s.model_breakdown.get("claude-opus-4-6", 0) > 50 and not any(t in s.tool_counts for t in complex_tools)))))
-        return AnalysisResult(title="Waste Analysis", sections=[Section(header="Waste Summary", rows=rows)], recommendations=recs)
+        rows.append(("Opus on simple tasks", str(sum(1 for s in sessions if s.model_breakdown.get("claude-opus-4-6", 0) > 50 and not any(t in s.tool_counts for t in complex_tools)))))
+        return AnalysisResult(title="Token Waste", sections=[Section(header="Token Waste Overview", rows=rows)], recommendations=recs)
 
 
 class HabitsAnalyzer:
@@ -636,14 +636,14 @@ class SavingsAnalyzer:
                 description=f"Use `gh` CLI instead of {total_wf} WebFetch calls to GitHub",
                 estimated_savings=f"{_fmt_cost(monthly_save)}/mo"))
 
-        # 5. Mega prompt savings
+        # 5. Oversized prompt savings
         total_mega = sum(s.mega_prompt_count for s in sessions)
         if total_mega > 10:
-            # mega prompts add ~2K extra tokens each to history
+            # oversized prompts add ~2K extra tokens each to history
             mega_token_cost = total_mega * 2000 * config.pricing.opus.cache_read_per_mtok / 1e6
             monthly_save = mega_token_cost * monthly_mult
             recs.append(Recommendation(severity="info",
-                description=f"Use file references instead of pasting ({total_mega} mega prompts)",
+                description=f"Use file references instead of pasting ({total_mega} oversized prompts)",
                 estimated_savings=f"{_fmt_cost(monthly_save)}/mo"))
 
         total_monthly_savings = 0

@@ -837,6 +837,54 @@ class TestTrendsBackfill:
 # Daily health check in session_start
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# run_uninstall
+# ---------------------------------------------------------------------------
+
+class TestRunUninstall:
+    def test_removes_hooks_from_settings(self, config, capsys):
+        from cc_retrospect.core import run_uninstall
+        settings = {
+            "hooks": {
+                "Stop": [{"hooks": [{"type": "command", "command": "python3 /path/to/cc-retrospect/scripts/dispatch.py stop_hook"}]}],
+                "PreToolUse": [{"hooks": [{"type": "command", "command": "some-other-hook"}]}],
+            },
+            "enabledPlugins": {"cc-sentinel@cc-sentinel": True, "other-plugin": True},
+        }
+        settings_path = config.claude_dir / "settings.json"
+        settings_path.write_text(json.dumps(settings))
+        run_uninstall(config=config)
+        out = capsys.readouterr().out
+        assert "Removed" in out
+        updated = json.loads(settings_path.read_text())
+        # Stop hook should be gone (only had cc-retrospect), PreToolUse should remain
+        assert "Stop" not in updated.get("hooks", {})
+        assert "PreToolUse" in updated.get("hooks", {})
+        # cc-sentinel plugin should be gone, other should remain
+        assert "cc-sentinel@cc-sentinel" not in updated.get("enabledPlugins", {})
+        assert "other-plugin" in updated.get("enabledPlugins", {})
+
+    def test_no_settings_file(self, tmp_path, capsys):
+        from cc_retrospect.core import run_uninstall, Config
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        claude_dir = tmp_path / "no-claude"  # doesn't exist, no settings.json
+        cfg = Config(data_dir=data_dir, claude_dir=claude_dir)
+        run_uninstall(config=cfg)
+        assert "No settings.json" in capsys.readouterr().out
+
+    def test_nothing_to_remove(self, config, capsys):
+        from cc_retrospect.core import run_uninstall
+        settings_path = config.claude_dir / "settings.json"
+        settings_path.write_text(json.dumps({"hooks": {}, "enabledPlugins": {}}))
+        run_uninstall(config=config)
+        assert "No cc-retrospect entries" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# Daily health check in session_start
+# ---------------------------------------------------------------------------
+
 class TestDailyHealthCheck:
     def test_health_check_fires_once_per_day(self, config, capsys):
         from cc_retrospect.core import run_session_start_hook

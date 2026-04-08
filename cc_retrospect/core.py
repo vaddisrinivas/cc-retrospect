@@ -1123,6 +1123,58 @@ def run_config(payload: dict = {}, *, config: Config | None = None) -> int:
     return 0
 
 
+def run_uninstall(payload: dict = {}, *, config: Config | None = None) -> int:
+    """Remove cc-retrospect hooks and plugin registration from settings.json."""
+    config = config or load_config()
+    settings_path = config.claude_dir / "settings.json"
+    if not settings_path.exists():
+        print("[cc-retrospect] No settings.json found.")
+        return 0
+    try:
+        settings = json.loads(settings_path.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"[cc-retrospect] Could not read settings.json: {e}")
+        return 1
+    changed = False
+    # Remove hooks referencing cc-retrospect
+    hooks = settings.get("hooks", {})
+    for event in list(hooks.keys()):
+        handlers = hooks[event]
+        filtered = []
+        for handler in handlers:
+            hook_list = handler.get("hooks", [])
+            clean = [h for h in hook_list if "cc-retrospect" not in h.get("command", "") and "dispatch.py" not in h.get("command", "")]
+            if clean:
+                handler["hooks"] = clean
+                filtered.append(handler)
+            elif clean != hook_list:
+                changed = True
+        if filtered != handlers:
+            changed = True
+        if filtered:
+            hooks[event] = filtered
+        else:
+            del hooks[event]
+            changed = True
+    # Remove plugin registration
+    plugins = settings.get("enabledPlugins", {})
+    for key in list(plugins.keys()):
+        if "cc-retrospect" in key or "cc-sentinel" in key:
+            del plugins[key]
+            changed = True
+    marketplaces = settings.get("extraKnownMarketplaces", [])
+    filtered_mp = [m for m in marketplaces if "cc-retrospect" not in str(m) and "cc-sentinel" not in str(m)]
+    if len(filtered_mp) != len(marketplaces):
+        settings["extraKnownMarketplaces"] = filtered_mp
+        changed = True
+    if changed:
+        settings_path.write_text(json.dumps(settings, indent=2))
+        print("[cc-retrospect] Removed hooks and plugin from settings.json.")
+    else:
+        print("[cc-retrospect] No cc-retrospect entries found in settings.json.")
+    return 0
+
+
 def _update_trends(config: Config) -> None:
     """Append a weekly snapshot if the current week hasn't been recorded yet."""
     now = datetime.now(timezone.utc)

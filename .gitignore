@@ -10,6 +10,12 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
-cc_retrospective/
 .DS_Store
 *.log
+
+# Stale package name
+cc_retrospective/
+
+# Dev artifacts
+.claude/LATER.md
+CONVERSATION-REPORT.md

@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "cc-retrospect"
@@ -9,6 +9,7 @@ description = "Token usage tracker and waste detector for Claude Code sessions"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+authors = [{ name = "Srinivas Vaddi" }]
 keywords = ["claude", "claude-code", "token", "cost", "analytics"]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -27,9 +28,12 @@ dependencies = [
 [project.optional-dependencies]
 test = ["pytest>=7.0", "pytest-cov>=4.0"]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["cc_retrospect*"]
+[project.urls]
+Homepage = "https://github.com/vaddisrinivas/cc-retrospect"
+Repository = "https://github.com/vaddisrinivas/cc-retrospect"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cc_retrospect"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

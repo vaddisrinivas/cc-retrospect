@@ -10,19 +10,17 @@ Claude Code doesn't show what you're spending. No cost dashboard, no warning at 
 
 ## Install
 
-### Plugin marketplace (recommended)
+### Plugin (recommended)
+
+In Claude Code:
 
 ```
-/install-plugin vaddisrinivas/cc-retrospect
+/plugin marketplace add vaddisrinivas/cc-retrospect
+/plugin install cc-retrospect@vaddisrinivas
+/reload-plugins
 ```
 
-### One-liner
-
-```bash
-git clone https://github.com/vaddisrinivas/cc-retrospect ~/.claude/plugins/cc-retrospect && ~/.claude/plugins/cc-retrospect/install.sh
-```
-
-### Manual
+### Git clone
 
 ```bash
 git clone https://github.com/vaddisrinivas/cc-retrospect ~/.claude/plugins/cc-retrospect

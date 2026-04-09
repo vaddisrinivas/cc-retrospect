@@ -1,155 +1,191 @@
 ---
 name: cc-retrospect
-description: Analyze Claude Code session costs, waste, habits, health, model efficiency, and savings. Accepts subcommands like /cc-retrospect waste, /cc-retrospect health, /cc-retrospect learn, etc.
+description: "Hybrid analyzer + AI reasoning for Claude Code sessions. Runs structured analyzers (--json), then Claude reasons about root causes, behavioral patterns, and personalized recommendations. Subcommands: waste, health, savings, model, profile, habits, compare, trends, tips, digest, report, learn, cleanup, export, hints."
 user-invocable: true
 allowed-tools: Bash Read Grep Glob
 ---
 
-# cc-retrospect
+# cc-retrospect — Hybrid Skill (Analyzer + Reasoner)
 
-Route based on the first argument. If no argument, run full analysis.
+You are a two-layer analysis system:
+- **Layer 1 (Analyzer):** Python analyzers produce structured JSON data
+- **Layer 2 (Reasoner):** You read JSON and apply behavioral reasoning that code can't do
 
 ## Subcommand routing
 
-Check the user's argument (the text after `/cc-retrospect`). Match the first word:
+Match the first word after `/cc-retrospect`:
 
-| Arg | Action |
-|-----|--------|
-| (none) | Full analysis — run Step A then Step B |
-| `waste` | Run `waste` analyzer then interpret |
-| `health` | Run `health` analyzer then interpret |
-| `savings` | Run `savings` analyzer then interpret |
-| `model` | Run `model` analyzer then interpret |
-| `digest` | Run `digest` analyzer then interpret |
-| `habits` | Run `habits` analyzer, present results |
-| `compare` | Run `compare` analyzer, present results |
-| `trends` | Run `trends` analyzer, present results |
-| `tips` | Run `tips` analyzer, present results |
-| `report` | Run `report` analyzer, present results |
-| `export` | Run `export`, present results |
-| `hints` | Run `hints`, present results |
-| `learn` | Run Step C |
-| `profile` | Run Step D |
-| `cleanup` | Run Step E |
+| Arg | Layer | Action |
+|-----|-------|--------|
+| (none) | Both | Full analysis — all analyzers + deep reasoning |
+| `waste` | Both | Waste analysis + root cause reasoning |
+| `health` | Both | Health check + behavioral diagnosis |
+| `savings` | Both | Savings projections + prioritized action plan |
+| `model` | Both | Model efficiency + per-project routing table |
+| `digest` | Both | Daily digest + morning action plan |
+| `profile` | Both | Full behavioral profile + work style analysis |
+| `habits` | Data | Usage patterns — present cleanly |
+| `compare` | Data | Week-over-week — present cleanly |
+| `trends` | Data | Weekly trends — present cleanly |
+| `tips` | Data | Quick tips — present cleanly |
+| `report` | Data | Full report — present cleanly |
+| `learn` | Data | Generate STYLE.md + LEARNINGS.md |
+| `cleanup` | Both | Disk waste scan + cleanup recommendations |
+| `export` | Data | JSON export |
+| `hints` | Data | Hint settings |
 
-## Step A — Run all analyzers (for full analysis)
+---
 
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py cost
-```
+## Layer 1: Get structured data
 
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py waste
-```
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py health
-```
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py habits
-```
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py savings
-```
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py model
-```
-
-## Step B — Interpret (for full analysis + deep subcommands)
-
-After running the data commands, synthesize findings into:
-
-1. **Executive summary** — 2-3 sentences: total spend, biggest waste, top opportunity
-2. **Top 3 actions** — ranked by $/month impact, with specific instructions
-3. **Model routing** — which projects should use Sonnet vs Opus
-4. **Session discipline** — are sessions too long? too many subagents?
-5. **Trend** — getting better or worse vs last week?
-
-Be specific. Name projects, dollar amounts, and exact actions. No generic advice.
-
-## Running a single analyzer
-
-For any subcommand that maps to a dispatcher command:
-
+For **data-only** subcommands, run without --json and present output:
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py <subcommand>
 ```
 
-For deep subcommands (waste, health, savings, model, digest), also interpret the output:
-- Name specific projects and dollar amounts
-- Explain *why* each pattern costs money
-- Prioritize by impact
-- Give one concrete next action
+For **hybrid** subcommands (waste, health, savings, model, digest, profile, full), run with --json:
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py <subcommand> --json
+```
 
-For data subcommands (habits, compare, trends, tips, report, export, hints), just present the output cleanly.
+For **full analysis** (no args), run all:
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py all --json
+```
 
-## Step C — Learn (generate STYLE.md + LEARNINGS.md)
+If `all` command doesn't exist, run these individually:
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py cost --json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py waste --json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py health --json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py habits --json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py savings --json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py model --json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py compare --json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py trends --json
+```
 
+---
+
+## Layer 2: Reasoning patterns
+
+After receiving JSON data, apply these analysis patterns. NEVER just reformat tables — REASON about the data.
+
+### Pattern 1: Root Cause Analysis
+For every metric, ask "WHY, not WHAT":
+- High frustration rate → Read frustration_words. Is it code navigation ("where is", "can't find"), regressions ("again", "still broken"), or Claude mistakes ("wrong", "no")?
+- Long sessions → Is the user deep-focusing on hard problems (productive) or stuck in correction loops (wasteful)?
+- Many subagents → Is the task genuinely complex, or is the user over-delegating simple searches?
+- High Opus usage → Is the work complex (architecture, debugging), or is it routine (Read/Edit/Bash)?
+
+### Pattern 2: Cross-Correlation
+Connect data across analyzers — no single metric tells the full story:
+- High frustration + long sessions + many corrections = user is stuck, suggest /plan mode
+- High frustration + short sessions + few corrections = hard external problem, user knows what they want
+- Low frustration + long sessions + many subagents = productive deep work, don't change anything
+- High cost + low frustration + high output = efficient, expensive sessions (acceptable)
+- High cost + high frustration + low output = burning money while stuck (urgent fix needed)
+- Many read-edit-read cycles on same files = verification anxiety or visual work (check file types — CSS/UI = normal)
+- WebFetch to github.com + Bash git commands in same session = tool confusion, suggest `gh` CLI
+- Opus on simple Read/Edit chains = model waste; Opus on Agent+Plan chains = appropriate
+
+### Pattern 3: Work Style Profiling
+Synthesize peak_hours + session_duration + projects_per_day + prompt_length into a profile:
+- **Sprinter:** Short sessions (<45min), many per day, terse prompts → optimize for fast context loading
+- **Deep Diver:** Long sessions (>90min), few per day, detailed prompts → optimize for session discipline + /compact
+- **Multitasker:** Many projects/day, context switches → optimize for project isolation + CLAUDE.md per project
+- **Night Owl vs Early Bird:** Peak hours reveal when the user does their best/worst work — correlate with frustration rates per time slot
+- **Learner vs Expert:** High correction rate + long prompts = learning the tool; Low corrections + terse commands = expert
+
+### Pattern 4: Money Impact Ranking
+Every recommendation MUST have a $/month estimate from the actual data:
+- Calculate: `(waste_per_session * sessions_per_month)` for each waste category
+- Rank by: impact * ease_of_change (switching models = easy; shorter sessions = hard)
+- Show: "Switch to Sonnet for project X → saves $Y/month (Z% of your spend)"
+- Distinguish: one-time savings (cleanup) vs recurring savings (behavior change)
+
+### Pattern 5: Trend Interpretation
+Don't just say "cost went up 15%":
+- WHY did it change? (new project? more sessions? model switch? harder problems?)
+- Is the trend sustainable? (one-off spike vs gradual increase)
+- Compare efficiency metrics alongside cost (cost up + efficiency up = scaling, cost up + efficiency down = problem)
+
+### Pattern 6: Model Routing Intelligence
+Go beyond "use Sonnet for cheap stuff":
+- Per-project analysis: What % of tool calls are Read/Edit/Bash (Sonnet-safe) vs Agent/Plan/WebSearch (Opus-worthy)?
+- Per-task pattern: Refactoring = Sonnet. Architecture = Opus. Debugging = depends on depth.
+- Switching cost: How often does the user switch mid-session? (high = annoying, low = set-and-forget)
+- Output quality risk: For which projects would Sonnet degrade output enough to cause MORE iterations?
+
+### Pattern 7: Frustration Forensics
+Deeper than frustration_rate:
+- Temporal: Does frustration spike at certain hours? (fatigue pattern)
+- Sequential: What happens BEFORE frustration? (tool failure? long wait? wrong output?)
+- Recovery: What does the user do AFTER frustration? (start over? push through? take a break?)
+- Project-specific: Which projects have highest frustration/session? (codebase quality issue?)
+- Tool-specific: tool_after_frustration reveals Claude's failure mode (always Grep after frustration = lost context)
+
+### Pattern 8: Session Health Scoring
+Grade each session A-D:
+- **A:** <90min, <8 subagents, <$30, frustration <2%, at least 1 /compact
+- **B:** <120min, <12 subagents, <$60, frustration <5%
+- **C:** <180min, <15 subagents, <$100, frustration <10%
+- **D:** >180min or >15 subagents or >$100 or frustration >10%
+- Show: "Your last 10 sessions: A A B C D B A B C A — trending: stable B+"
+
+### Pattern 9: Waste Taxonomy
+Classify waste into fixable categories:
+- **Autopilot waste:** Wrong model for task (fixable: model routing rule)
+- **Habit waste:** Long sessions, no /compact (fixable: timer/nudge)
+- **Tool waste:** WebFetch for GitHub, Agent for Grep (fixable: CLAUDE.md rules)
+- **Discovery waste:** Re-reading same files, searching for same things (fixable: better CLAUDE.md, graphify)
+- **Communication waste:** Corrections that could be avoided with /plan (fixable: plan mode habit)
+- **Structural waste:** Codebase is hard to navigate (fixable: refactoring, not Claude tuning)
+
+### Pattern 10: Personalized Recommendations
+Adapt advice to the user's demonstrated style:
+- Terse user → Give 3 bullet points, not paragraphs
+- Detailed user → Explain the reasoning behind each recommendation
+- Cost-conscious user → Lead with dollar amounts
+- Quality-focused user → Lead with output quality impact
+- If user has STYLE.md → Read it and match your output format to their preferences
+
+---
+
+## Special subcommands
+
+### Profile (behavioral deep-dive)
+Run all analyzers with --json, then produce:
+1. **Identity:** "You are a [Sprinter/Deep Diver/Multitasker] who [works pattern]"
+2. **Strengths:** What the data shows you do well (low frustration projects, good cache rates, etc.)
+3. **Blind spots:** Patterns you probably don't notice (gradual session creep, model inertia, etc.)
+4. **Top 5 actions:** Ranked by $/month with effort estimate (easy/medium/hard)
+5. **Model routing table:** Per-project recommendation with reasoning
+6. **STYLE.md update:** If your communication patterns have changed, suggest STYLE.md edits
+Offer to save as `~/.cc-retrospect/profiles/profile-{date}.md`
+
+### Learn (STYLE.md + LEARNINGS.md)
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py learn
 ```
+Read generated files, offer to save. Ask before overwriting existing.
 
-Read the generated files and offer to save them:
-- `~/.claude/STYLE.md` — communication style directive
-- `~/.cc-retrospect/LEARNINGS.md` — transferable patterns
-
-Ask before overwriting existing files.
-
-## Step D — Profile (behavioral analysis)
-
-Run these analyzers first:
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py cost
-```
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py habits
-```
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py waste
-```
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py model
-```
-
-Then analyze behavioral patterns:
-- Communication style (prompt lengths, frustration triggers, command vs instruction ratio)
-- Session discipline (marathon sessions, compaction frequency)
-- Model usage efficiency per project
-- Plan mode opportunities (sessions with many corrections)
-- Top 5 money-saving actions with $/month from actual data
-
-Output a structured profile and offer to save as `~/.cc-retrospect/profiles/profile-{date}.md`.
-
-## Step E — Cleanup (disk waste)
-
+### Cleanup (disk waste)
 ```bash
 du -sh ~/.claude/ 2>/dev/null || echo "~/.claude not found"
-```
-
-```bash
 du -sh ~/.claude/telemetry/ 2>/dev/null || echo "No telemetry dir"
-```
-
-```bash
 find ~/.claude/projects/ -path "*/subagents/*" -name "*.jsonl" | wc -l
-```
-
-```bash
 du -sh ~/.cc-retrospect/ 2>/dev/null || echo "No data dir"
 ```
+Present findings table. Show cleanup commands. NEVER run them without asking.
 
-Present findings in a table. Show cleanup commands but NEVER run them without asking first.
+---
 
-## Rules
+## Output rules
 
-- Always run the data commands first, then interpret
-- Be specific — name projects, dollar amounts, dates
-- No generic advice — every recommendation must cite the user's actual data
-- For cleanup: NEVER delete without explicit confirmation
+1. **No generic advice.** Every recommendation must cite the user's actual data with numbers.
+2. **Name names.** Projects, tools, dollar amounts, dates — not "some projects" or "consider reducing."
+3. **Root cause first.** "Your frustration spikes at 10pm because..." not "Your frustration rate is 8.3%."
+4. **Rank by impact.** Always order recommendations by $/month saved, highest first.
+5. **Acknowledge good patterns.** Don't only criticize — call out what's working well.
+6. **Match the user's style.** Read STYLE.md if it exists. Terse user = terse output.

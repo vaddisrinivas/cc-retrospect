@@ -693,6 +693,7 @@ class TestDispatchRouting:
             "cost", "habits", "health", "tips", "report", "compare", "waste", "hints",
             "savings", "model", "digest", "status", "export", "trends", "learn",
             "reset", "config", "uninstall",
+            "all",
         }
         assert expected == set(dispatch._DISPATCH.keys())
 

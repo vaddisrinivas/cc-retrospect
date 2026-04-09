@@ -334,3 +334,23 @@ def run_uninstall(payload: dict | None = None, *, config: Config | None = None) 
     else:
         print("[cc-retrospect] No cc-retrospect entries found in settings.json.")
     return 0
+
+
+def run_all(payload: dict | None = None, *, config: Config | None = None) -> int:
+    """Run all analyzers and return combined JSON output."""
+    payload = payload or {}
+    config = config or load_config()
+    sessions = load_all_sessions(config)
+    sessions = _filter_sessions(sessions, project=payload.get("project"), days=payload.get("days"), config=config)
+    results = {}
+    for analyzer in get_analyzers(config):
+        result = analyzer.analyze(sessions, config)
+        results[result.title] = result.model_dump()
+    try:
+        from cc_retrospect.learn import analyze_user_messages
+        profile = analyze_user_messages(config)
+        results["user_profile"] = profile.model_dump()
+    except Exception:
+        pass
+    print(json.dumps(results, default=str, indent=2))
+    return 0

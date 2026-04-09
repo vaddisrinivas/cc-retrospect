@@ -23,7 +23,7 @@ def tmp_data_dir(tmp_path):
 @pytest.fixture
 def config(tmp_data_dir):
     from cc_retrospect.core import Config
-    return Config(data_dir=tmp_data_dir)
+    return Config(data_dir=tmp_data_dir, _env_file=None)
 
 
 class TestPreToolUse:
@@ -189,5 +189,5 @@ class TestDispatcher:
                     "pre_compact", "post_compact", "user_prompt",
                     "cost", "habits", "health", "tips", "report", "compare", "waste", "hints",
                     "savings", "model", "digest", "status", "export", "trends", "learn",
-                    "reset", "config", "uninstall"}
+                    "reset", "config", "uninstall", "all"}
         assert expected == set(dispatch._DISPATCH.keys())

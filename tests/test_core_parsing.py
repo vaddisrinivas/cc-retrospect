@@ -113,8 +113,8 @@ class TestComputeCost:
             entrypoint="", cwd="", git_branch="",
         )
         cost = compute_cost(rec, default_config().pricing)
-        # 1M input * $15/M + 1M output * $75/M + 1M cache_create * $18.75/M + 1M cache_read * $1.50/M
-        expected = 15.0 + 75.0 + 18.75 + 1.50
+        # 1M input * $5/M + 1M output * $25/M + 1M cache_create * $6.25/M + 1M cache_read * $0.50/M
+        expected = 5.0 + 25.0 + 6.25 + 0.50
         assert abs(cost - expected) < 0.01, f"Expected {expected}, got {cost}"
 
     def test_sonnet_cost(self):
@@ -138,7 +138,7 @@ class TestComputeCost:
             entrypoint="", cwd="", git_branch="",
         )
         cost = compute_cost(rec, default_config().pricing)
-        expected = 0.80 + 4.0 + 1.0 + 0.08
+        expected = 1.0 + 5.0 + 1.25 + 0.10
         assert abs(cost - expected) < 0.01, f"Expected {expected}, got {cost}"
 
     def test_zero_tokens_zero_cost(self):
@@ -160,7 +160,7 @@ class TestComputeCost:
             entrypoint="", cwd="", git_branch="",
         )
         cost = compute_cost(rec, default_config().pricing)
-        assert abs(cost - 15.0) < 0.01  # Opus input rate
+        assert abs(cost - 5.0) < 0.01  # Opus input rate (2026 pricing)
 
 
 class TestDisplayProject:

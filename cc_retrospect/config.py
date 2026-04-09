@@ -8,16 +8,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class PricingConfig(BaseModel):
-    input_per_mtok: float = 15.0
-    output_per_mtok: float = 75.0
-    cache_create_per_mtok: float = 18.75
-    cache_read_per_mtok: float = 1.50
+    input_per_mtok: float = 5.0
+    output_per_mtok: float = 25.0
+    cache_create_per_mtok: float = 6.25
+    cache_read_per_mtok: float = 0.50
 
 
 class ModelPricing(BaseModel):
     opus: PricingConfig = PricingConfig()
     sonnet: PricingConfig = PricingConfig(input_per_mtok=3.0, output_per_mtok=15.0, cache_create_per_mtok=3.75, cache_read_per_mtok=0.30)
-    haiku: PricingConfig = PricingConfig(input_per_mtok=0.80, output_per_mtok=4.0, cache_create_per_mtok=1.0, cache_read_per_mtok=0.08)
+    haiku: PricingConfig = PricingConfig(input_per_mtok=1.0, output_per_mtok=5.0, cache_create_per_mtok=1.25, cache_read_per_mtok=0.10)
 
 
 class ThresholdsConfig(BaseModel):

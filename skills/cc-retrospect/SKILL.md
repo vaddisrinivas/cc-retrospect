@@ -1,6 +1,6 @@
 ---
 name: cc-retrospect
-description: "Hybrid analyzer + AI reasoning for Claude Code sessions. Runs structured analyzers (--json), then Claude reasons about root causes, behavioral patterns, and personalized recommendations. Subcommands: waste, health, savings, model, profile, habits, compare, trends, tips, digest, report, learn, cleanup, export, hints."
+description: "Hybrid analyzer + AI reasoning for Claude Code sessions. Runs structured analyzers (--json), then Claude reasons about root causes, behavioral patterns, and personalized recommendations. Subcommands: waste, health, savings, model, profile, habits, compare, trends, tips, digest, report, learn, cleanup, export, hints, dashboard."
 user-invocable: true
 allowed-tools: Bash Read Grep Glob
 ---
@@ -33,6 +33,7 @@ Match the first word after `/cc-retrospect`:
 | `cleanup` | Both | Disk waste scan + cleanup recommendations |
 | `export` | Data | JSON export |
 | `hints` | Data | Hint settings |
+| `dashboard` | Data | Open visual dashboard in browser |
 
 ---
 

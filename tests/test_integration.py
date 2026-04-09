@@ -694,6 +694,7 @@ class TestDispatchRouting:
             "savings", "model", "digest", "status", "export", "trends", "learn",
             "reset", "config", "uninstall",
             "all",
+            "dashboard",
         }
         assert expected == set(dispatch._DISPATCH.keys())
 

@@ -354,3 +354,8 @@ def run_all(payload: dict | None = None, *, config: Config | None = None) -> int
         pass
     print(json.dumps(results, default=str, indent=2))
     return 0
+
+def run_dashboard(payload: dict | None = None, *, config: Config | None = None) -> int:
+    """Generate and open the cc-retrospect dashboard."""
+    from cc_retrospect.dashboard import run_dashboard as _run
+    return _run(payload, config=config)

@@ -22,14 +22,26 @@ logger = logging.getLogger("cc_retrospect")
 
 
 def _run_custom_scripts(config, event: str, env_vars: dict[str, str]) -> None:
-    """Run user-defined scripts for a hook event."""
+    """Run user-defined scripts for a hook event.
+
+    Special prefix 'notify:' sends a macOS notification (avoids shell quoting issues).
+    Env var placeholders like $CC_DAILY_COST are expanded before execution.
+    """
     scripts_list = getattr(config.scripts, event, [])
     if not scripts_list: return
     env = {**os.environ, "CC_EVENT": event}
     env.update({k: str(v) for k, v in env_vars.items()})
     for cmd in scripts_list:
+        # Expand $VAR and ${VAR} placeholders from env_vars
+        expanded = cmd
+        for k, v in env_vars.items():
+            expanded = expanded.replace(f"${{{k}}}", v).replace(f"${k}", v)
         try:
-            subprocess.run(cmd, shell=True, env=env, timeout=config.scripts.timeout_seconds, capture_output=True, text=True)
+            if expanded.startswith("notify:"):
+                msg = expanded[7:].strip()
+                subprocess.run(["osascript", "-e", f'display notification "{msg}" with title "cc-retrospect"'], timeout=config.scripts.timeout_seconds, capture_output=True, text=True)
+            else:
+                subprocess.run(expanded, shell=True, env=env, timeout=config.scripts.timeout_seconds, capture_output=True, text=True)
         except subprocess.TimeoutExpired:
             logger.warning("Custom script timed out: %s", cmd)
         except Exception as e:

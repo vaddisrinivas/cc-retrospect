@@ -203,7 +203,7 @@ document.getElementById('meta').textContent = `${D.generated_at} \u00b7 ${D.sess
     data: { labels, datasets: [{ data: labels.map(l=>totals[l]), backgroundColor: labels.map(l=>colors[l]||'#888'), borderWidth: 0 }] },
     options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
       plugins: { legend: { position: 'right', labels: { padding: 12, usePointStyle: true, pointStyle: 'rectRounded',
-        generateLabels: ch => ch.data.labels.map((l,i) => ({text:`${l}  ${fmt(ch.data.datasets[0].data[i])}`, fillStyle:ch.data.datasets[0].backgroundColor[i], strokeStyle:'transparent', color:'#e6edf3', index:i}))
+        generateLabels: ch => ch.data.labels.map((l,i) => ({text:`${l}  ${fmt(ch.data.datasets[0].data[i])}`, fillStyle:ch.data.datasets[0].backgroundColor[i], strokeStyle:'transparent', fontColor:'#e6edf3', index:i}))
       }}}
     }
   });

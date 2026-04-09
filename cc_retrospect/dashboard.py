@@ -9,7 +9,7 @@ from pathlib import Path
 
 from cc_retrospect.config import Config, load_config
 from cc_retrospect.cache import load_all_sessions
-from cc_retrospect.dashboard_template import DASHBOARD_HTML
+DASHBOARD_HTML = (Path(__file__).parent / "dashboard_template.html").read_text(encoding="utf-8")
 
 
 def _load_jsonl(path: Path) -> list[dict]:
@@ -89,39 +89,42 @@ def generate_dashboard(config: Config | None = None, days: int = 30) -> str:
     }
 
     data_json = json.dumps(data, default=str)
-    return DASHBOARD_HTML.replace("__DATA_JSON__", data_json)
+    return data_json
 
 
 def run_dashboard(payload: dict | None = None, *, config: Config | None = None) -> int:
-    """Generate dashboard HTML file and open in browser."""
+    """Generate dashboard HTML + data.js and open in browser."""
     payload = payload or {}
     config = config or load_config()
     days = payload.get("days", 30)
 
-    html_content = generate_dashboard(config, days=days)
-
-    # Always write the latest dashboard
-    out_path = config.data_dir / "dashboard.html"
-    out_path.write_text(html_content, encoding="utf-8")
-
-    # Persist a timestamped snapshot + raw JSON so reports accumulate
-    reports_dir = config.data_dir / "reports"
-    reports_dir.mkdir(exist_ok=True)
+    data_json = generate_dashboard(config, days=days)
     stamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    snapshot_path = reports_dir / f"dashboard-{stamp}.html"
-    snapshot_path.write_text(html_content, encoding="utf-8")
 
-    # Write raw data JSON (reusable without re-parsing sessions)
-    # Template embeds data as: const D = __DATA_JSON__;
-    script_start = html_content.find('const D = ') + len('const D = ')
-    script_end = html_content.find(';\n', script_start)
-    if script_start > len('const D = ') and script_end > script_start:
-        (reports_dir / f"data-{stamp}.json").write_text(
-            html_content[script_start:script_end], encoding="utf-8"
-        )
+    # Write latest data.js alongside dashboard.html — loaded via <script src>
+    data_dir = config.data_dir
+    data_js_path = data_dir / "data.js"
+    data_js_path.write_text(f"const D = {data_json};\n", encoding="utf-8")
+
+    # Write the HTML template (references ./data.js)
+    html = DASHBOARD_HTML  # no inline data injection needed
+    out_path = data_dir / "dashboard.html"
+    out_path.write_text(html, encoding="utf-8")
+
+    # Persist timestamped copies — snapshot HTML + data JS stay together
+    reports_dir = data_dir / "reports"
+    reports_dir.mkdir(exist_ok=True)
+    snap_data = reports_dir / f"data-{stamp}.js"
+    snap_html = reports_dir / f"dashboard-{stamp}.html"
+    snap_data.write_text(f"const D = {data_json};\n", encoding="utf-8")
+    # Snapshot HTML loads its own data file (relative path)
+    snap_html.write_text(
+        html.replace('src="data.js"', f'src="data-{stamp}.js"'),
+        encoding="utf-8",
+    )
 
     url = out_path.resolve().as_uri()
     print(f"Dashboard: {url}", file=sys.stderr)
-    print(f"Snapshot:  {snapshot_path.resolve().as_uri()}", file=sys.stderr)
+    print(f"Snapshot:  {snap_html.resolve().as_uri()}", file=sys.stderr)
     webbrowser.open(url)
     return 0

@@ -464,7 +464,7 @@ def run_post_tool_use(payload: dict, *, config: Config | None = None) -> int:
         url = (payload.get("tool_input") or {}).get("url", "") if isinstance(payload.get("tool_input"), dict) else ""
         if "github.com" in url: live.webfetch_github_count += 1
     hints = []
-    msg = live.tool_count
+    msg = max(live.tool_count, live.message_count)  # whichever is higher triggers first
     th = config.thresholds
     if msg >= th.compact_nudge_first and not live.compact_nudged:
         hints.append(config.messages.hint_compact_first.format(count=msg))
@@ -507,6 +507,25 @@ def run_user_prompt(payload: dict, *, config: Config | None = None) -> int:
     live.message_count += 1
     if plen > config.thresholds.mega_prompt_chars:
         live.mega_prompt_count = getattr(live, "mega_prompt_count", 0) + 1
+
+    # Rapid-fire detection: 5+ prompts within 30s
+    now_ts = datetime.now(timezone.utc).isoformat()
+    if live.last_prompt_ts:
+        try:
+            last = datetime.fromisoformat(live.last_prompt_ts)
+            gap = (datetime.now(timezone.utc) - last).total_seconds()
+            if gap < 30:
+                live.rapid_fire_count += 1
+            else:
+                live.rapid_fire_count = 0
+        except (ValueError, TypeError):
+            live.rapid_fire_count = 0
+    live.last_prompt_ts = now_ts
+
+    if live.rapid_fire_count >= 5 and not live.rapid_fire_warned:
+        hints.append(f"Rapid-fire: {live.rapid_fire_count} prompts in quick succession. Consider batching into one detailed prompt — saves tokens on context replay.")
+        live.rapid_fire_warned = True
+
     _save_live_state(config, live)
 
     if hints and config.hints.user_prompt:

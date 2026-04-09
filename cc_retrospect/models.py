@@ -97,6 +97,7 @@ class LiveSessionState(BaseModel):
     subagent_count: int = 0; bash_chain_warned: bool = False
     compact_nudged: bool = False; compact_nudged_2: bool = False; subagent_warned: bool = False
     compaction_count: int = 0; mega_prompt_count: int = 0
+    last_prompt_ts: str = ""; rapid_fire_count: int = 0; rapid_fire_warned: bool = False
 
     def __getitem__(self, key: str):
         return getattr(self, key)

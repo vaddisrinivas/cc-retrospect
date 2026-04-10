@@ -30,6 +30,21 @@ pip install -e .
 
 Hooks are auto-discovered by Claude Code from the plugin directory.
 
+### Update
+
+```
+/plugin update cc-retrospect@vaddisrinivas
+/reload-plugins
+```
+
+Or via git:
+
+```bash
+cd ~/.claude/plugins/cc-retrospect
+git pull
+pip install -e .
+```
+
 ---
 
 ## Dashboard
@@ -100,7 +115,9 @@ Hooks fire on every session with zero setup:
 | **User prompt** | Before prompt submit | Detect mega-pastes (>1000 chars) and very long prompts |
 | **Compaction** | Before/after compact | Log compaction events with token counts |
 
-### Commands (quick data, no AI reasoning)
+### Commands (instant data, no AI)
+
+Slash commands that run the Python analyzers directly — fast, no tokens spent on reasoning:
 
 ```
 /cc-retrospect:dashboard   Open the live dashboard (starts server if needed)
@@ -113,27 +130,28 @@ Hooks fire on every session with zero setup:
 
 All commands support `--json`, `--project NAME`, and `--days N` flags.
 
-### Analysis skill (AI-powered insights)
+### Skill (AI-powered analysis)
 
-One skill for everything. Claude runs the analyzers, then interprets your data:
+One skill — Claude runs the analyzers and then reasons about root causes, behavioral patterns, and personalized recommendations:
 
 ```
 /cc-retrospect              Full retrospective — cost + waste + health + habits + savings + model
-/cc-retrospect waste        Deep waste analysis with project-specific explanations
+/cc-retrospect waste        Deep waste analysis with root cause reasoning
 /cc-retrospect health       Health deep-dive — session discipline, frustration patterns
 /cc-retrospect savings      Prioritized savings recommendations with dollar amounts
-/cc-retrospect model        Model efficiency — which projects should use Sonnet vs Opus
+/cc-retrospect model        Model efficiency — per-project routing table
+/cc-retrospect profile      Full behavioral profile + work style analysis
 /cc-retrospect digest       Morning briefing — yesterday's numbers vs baseline
 /cc-retrospect habits       Usage patterns — session lengths, peak hours, tools
 /cc-retrospect compare      This week vs last week
 /cc-retrospect trends       Weekly trend tracking over time
 /cc-retrospect tips         1-3 actionable tips from recent patterns
-/cc-retrospect report       Full markdown report saved to disk
+/cc-retrospect report       Full markdown report
 /cc-retrospect learn        Generate STYLE.md + LEARNINGS.md from your history
-/cc-retrospect profile      Behavioral profile with communication style analysis
-/cc-retrospect cleanup      Find and clean disk waste from Claude Code sessions
+/cc-retrospect cleanup      Disk waste scan + cleanup recommendations
 /cc-retrospect export       JSON export of all session data
 /cc-retrospect hints        Show/configure which inline hints are active
+/cc-retrospect dashboard    Open the visual dashboard
 ```
 
 ---

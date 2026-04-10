@@ -1012,7 +1012,7 @@ class TestUrlparseExceptionPaths:
         }, "timestamp": "2026-01-01T10:00:00Z", "sessionId": "s-up"}]
         p = tmp_path / "s-up.jsonl"
         p.write_text(json.dumps(data[0]))
-        with patch("cc_retrospect.parsers.urlparse", side_effect=Exception("boom")):
+        with patch("cc_retrospect.parsers.urlparse", side_effect=ValueError("boom")):
             summary = analyze_session(p, "proj", default_config())
         assert summary is not None  # didn't crash
 
@@ -1021,7 +1021,7 @@ class TestUrlparseExceptionPaths:
         from cc_retrospect.core import run_pre_tool_use, _init_live_state
         _init_live_state(config)
         with patch("cc_retrospect.hooks.load_config", return_value=config):
-            with patch("cc_retrospect.hooks.urlparse", side_effect=Exception("boom")):
+            with patch("cc_retrospect.hooks.urlparse", side_effect=ValueError("boom")):
                 run_pre_tool_use({
                     "tool_name": "WebFetch",
                     "tool_input": {"url": "https://github.com/x"},

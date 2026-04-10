@@ -2155,24 +2155,27 @@
     /* ── REPORTS TAB ────────────────────────── */
     function renderReports() {
       const el = document.getElementById('reports-list');
-      el.innerHTML = '<div class="empty" style="color:var(--muted)">Loading…</div>';
+      el.innerHTML = '<div class="empty" style="color:var(--muted)">Loading\u2026</div>';
       fetch('/api/reports')
-        .then(r => r.json())
-        .then(reports => {
+        .then(function(r) { return r.json(); })
+        .then(function(reports) {
           if (!reports.length) {
             el.innerHTML = '<div class="empty">No saved reports yet.</div>';
             return;
           }
-          el.innerHTML = '<div class="reports-list">' + reports.map((r, i) => `
-        <div class="report-row" id="report-row-${i}">
-          <div class="report-date">${r.date || r.name}</div>
-          <div class="report-name">${r.name}</div>
-          <div class="report-actions">
-            ${r.html_url ? `<a class="btn-report" href="${r.html_url}" target="_blank">↗ Open</a>` : ''}
-            ${r.data_url ? `<button class="btn-report load-btn" onclick="loadReport(${i})">⬇ Load</button>` : ''}
-            <span class="report-loaded-badge" id="loaded-badge-${i}" style="display:none">Loaded</span>
-          </div>
-        </div>`).join('') + '</div>';
+          var rows = reports.map(function(r, i) {
+            var openBtn = r.html_url ? '<a class="btn-report" href="' + r.html_url + '" target="_blank">\u2197 Open</a>' : '';
+            var loadBtn = r.data_url ? '<button class="btn-report load-btn" onclick="loadReport(' + i + ')">\u2b07 Load</button>' : '';
+            return '<div class="report-row" id="report-row-' + i + '">' +
+              '<div class="report-date">' + (r.date || r.name) + '</div>' +
+              '<div class="report-name">' + r.name + '</div>' +
+              '<div class="report-actions">' + openBtn + loadBtn +
+              '<span class="report-loaded-badge" id="loaded-badge-' + i + '" style="display:none">Loaded</span>' +
+              '</div></div>';
+          });
+          el.innerHTML = '<div class="reports-list">' + rows.join('') + '</div>';
+        })
+        .catch(function() { el.innerHTML = '<div class="empty">Failed to load reports.</div>'; });
     }
 
     function loadReport(idx) {

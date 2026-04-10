@@ -32,6 +32,59 @@ Hooks are auto-discovered by Claude Code from the plugin directory.
 
 ---
 
+## Dashboard
+
+Live dashboard at `http://127.0.0.1:7731` — open it with:
+
+```
+/cc-retrospect:dashboard
+```
+
+The server starts once and persists across sessions. Refresh in-place with the ↺ button or `POST /api/reload`.
+
+**What it shows:**
+- Today's spend vs budget tiers (warning / critical / severe) with a 7-day cost sparkline
+- Cost by project + daily stacked bar chart
+- Session health grades (A–D) — searchable, filterable by grade, sortable by cost/duration/messages
+- Tool usage bar chart — click any tool to filter sessions that used it
+- Activity heatmap — sessions by hour-of-day × day-of-week
+- Compaction event timeline
+- Frustration word cloud
+- Weekly trend table
+- Saved report snapshots with open/load buttons
+- Inline config editor for `~/.cc-retrospect/config.env`
+
+**Keyboard shortcuts:**
+
+| Key | Action |
+|-----|--------|
+| `1`–`4` | Switch tabs |
+| `/` | Focus session search |
+| `↑` `↓` | Navigate sessions |
+| `Enter` | Expand / collapse session |
+| `Esc` | Clear search / close overlay |
+| `d` | Toggle dark / light mode |
+| `?` | Show all shortcuts |
+
+**Export:** CSV and JSON buttons in the header. Reports tab saves timestamped snapshots.
+
+**API endpoints** (all on `127.0.0.1:7731`):
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Dashboard HTML |
+| `/data.js` | GET | Current data payload |
+| `/api/reload` | POST | Regenerate data from live sessions |
+| `/api/config` | GET / POST | Read / write `config.env` |
+| `/api/sessions` | GET | Last 100 sessions as JSON |
+| `/api/health` | GET | Server health check |
+| `/api/reports` | GET | List saved snapshots |
+| `/reports/<name>` | GET | Serve a snapshot |
+
+Port defaults to `7731`. Override with `CC_RETROSPECT_PORT=XXXX`.
+
+---
+
 ## How it works
 
 ### Hooks (automatic, silent)
@@ -50,6 +103,7 @@ Hooks fire on every session with zero setup:
 ### Commands (quick data, no AI reasoning)
 
 ```
+/cc-retrospect:dashboard   Open the live dashboard (starts server if needed)
 /cc-retrospect:cost        Cost breakdown by project, model, time period
 /cc-retrospect:status      Plugin health check — verify install, hooks, data
 /cc-retrospect:config      Show current config values and overrides
@@ -105,6 +159,9 @@ HINTS__POST_TOOL=true
 
 # Exclude projects/entrypoints from analysis
 FILTER__EXCLUDE_ENTRYPOINTS=["cc-retrospect","cc-later"]
+
+# Dashboard server port (default: 7731)
+# CC_RETROSPECT_PORT=7731
 ```
 
 Full config reference: [docs/configuration.md](docs/configuration.md)
@@ -115,16 +172,34 @@ Full config reference: [docs/configuration.md](docs/configuration.md)
 
 ```
 cc_retrospect/
-  config.py      Config models (Pydantic + pydantic-settings)
-  models.py      Data models (SessionSummary, AnalysisResult, etc.)
-  parsers.py     JSONL parsing, session analysis, cost computation
-  cache.py       Session cache, atomic writes, live state
-  analyzers.py   9 analyzers (Cost, Waste, Health, Habits, Tips, Compare, Savings, Model, Trend)
-  hooks.py       7 hooks (stop, start, pre/post tool, prompt, pre/post compact)
-  commands.py    17 command entry points
-  utils.py       Formatting, filtering, rendering
-  learn.py       STYLE.md / LEARNINGS.md generation
-  core.py        Backward-compat re-export shim
+  config.py               Config models (Pydantic + pydantic-settings)
+  models.py               Data models (SessionSummary, AnalysisResult, etc.)
+  parsers.py              JSONL parsing, session analysis, cost computation
+  cache.py                Session cache, atomic writes, live state
+  analyzers.py            9 analyzers (Cost, Waste, Health, Habits, Tips, Compare, Savings, Model, Trend)
+  hooks.py                7 hooks (stop, start, pre/post tool, prompt, pre/post compact)
+  commands.py             17 command entry points
+  dashboard.py            Dashboard HTML + data payload generation
+  dashboard_server.py     Persistent HTTP daemon on 127.0.0.1:7731
+  dashboard_template.html Dashboard UI (Chart.js, vanilla JS, dark/light theme)
+  utils.py                Formatting, filtering, rendering
+  learn.py                STYLE.md / LEARNINGS.md generation
+  core.py                 Backward-compat re-export shim
+```
+
+Data payload sent to the dashboard (`D`):
+
+```
+D.state            Today's cost, per-project breakdown, budget alert state
+D.sessions         All sessions in window (cost, tokens, tools, waste flags, grades)
+D.trends           Weekly snapshots
+D.compactions      Compaction events
+D.budget_tiers     Warning / critical / severe thresholds
+D.tool_usage       Aggregate tool counts across all sessions
+D.hourly_activity  Sessions per hour of day (24 buckets)
+D.cost_by_day      Daily cost totals
+D.model_recommendation  Haiku vs Sonnet advisory
+D.reports          Saved snapshot list
 ```
 
 ## Data & Privacy

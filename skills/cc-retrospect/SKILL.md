@@ -90,13 +90,37 @@ Connect data across analyzers — no single metric tells the full story:
 - WebFetch to github.com + Bash git commands in same session = tool confusion, suggest `gh` CLI
 - Opus on simple Read/Edit chains = model waste; Opus on Agent+Plan chains = appropriate
 
-### Pattern 3: Work Style Profiling
-Synthesize peak_hours + session_duration + projects_per_day + prompt_length into a profile:
-- **Sprinter:** Short sessions (<45min), many per day, terse prompts → optimize for fast context loading
-- **Deep Diver:** Long sessions (>90min), few per day, detailed prompts → optimize for session discipline + /compact
-- **Multitasker:** Many projects/day, context switches → optimize for project isolation + CLAUDE.md per project
-- **Night Owl vs Early Bird:** Peak hours reveal when the user does their best/worst work — correlate with frustration rates per time slot
-- **Learner vs Expert:** High correction rate + long prompts = learning the tool; Low corrections + terse commands = expert
+### Pattern 3: Work Style Profiling — Archetypes
+
+Invent a unique archetype name + emoji for the user based on their data. Don't pick from a fixed list — synthesize something that captures their specific combination of habits, tools, models, and patterns. The archetype should feel personal, not generic.
+
+Consider these dimensions when creating an archetype:
+- Model split (Opus-heavy vs Sonnet-heavy vs mixed)
+- Session patterns (short bursts vs marathons, frequency per day)
+- Tool distribution (Bash-heavy, Edit-heavy, WebSearch-heavy, Agent-heavy)
+- Frustration patterns (what triggers it, when it spikes)
+- Peak hours and day-of-week patterns
+- Project diversity (focused vs multi-project)
+- Subagent usage (self-reliant vs delegation-heavy)
+
+Examples to inspire (don't reuse these verbatim — create something new each time):
+- "The 3AM Architect" — builds complex systems during late-night sessions
+- "The Opus Maximalist" — runs everything on Opus even when Sonnet would suffice
+- "The Terminal Monk" — 60% Bash, rarely leaves the CLI
+- "The Context Burner" — 4h average sessions without /compact
+- "The Sprint Queen" — 15 sessions/day, 20 minutes each, zero waste
+- "The Research Spiral" — WebSearch chains that never end
+
+The dashboard also displays an archetype on the profile card. It uses a simple heuristic in Python, but your reasoning should be richer and more specific than what the card shows.
+
+#### Trait Scores (0-100)
+The dashboard computes these for the profile card:
+- **Efficiency** = (cache_rate + model_efficiency) / 2
+- **Intensity** = avg_cost_per_session / $10 * 100
+- **Persistence** = streak_days / 30 * 100
+- **Patience** = 100 - frustration_rate * 3
+- **Velocity** = sessions_per_day / 15 * 100
+- **Depth** = avg_session_minutes / 120 * 100
 
 ### Pattern 4: Money Impact Ranking
 Every recommendation MUST have a $/month estimate from the actual data:

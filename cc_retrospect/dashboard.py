@@ -133,6 +133,229 @@ def _build_dashboard_data(config: Config | None = None, days: int = 30) -> str:
 
     model_rec = _load_json(config.data_dir / "model_recommendation.json")
 
+    # ── Profile stats ────────────────────────────────────────────────────────
+    from datetime import timedelta
+
+    total_cost = sum(s.total_cost for s in sessions)
+    total_sessions = len(sessions)
+    total_messages = sum(s.message_count for s in sessions)
+    total_input = sum(s.total_input_tokens for s in sessions)
+    total_output = sum(s.total_output_tokens for s in sessions)
+    total_cache_read = sum(s.total_cache_read_tokens for s in sessions)
+    total_cache_create = sum(s.total_cache_creation_tokens for s in sessions)
+    # Cache rate: reads / (reads + creation + fresh input) — matches health analyzer
+    cache_denom = total_cache_read + total_cache_create + total_input
+    cache_rate = total_cache_read / cache_denom * 100 if cache_denom > 0 else 0
+    avg_session_min = sum(s.duration_minutes for s in sessions) / total_sessions if total_sessions else 0
+    total_tools = sum(sum(s.tool_counts.values()) for s in sessions)
+    total_frustrations = sum(s.frustration_count for s in sessions)
+    frustration_rate = total_frustrations / total_sessions * 100 if total_sessions else 0
+    total_subagents = sum(s.subagent_count for s in sessions)
+
+    model_costs: dict[str, float] = {}
+    for s in sessions:
+        for m, c in (s.model_breakdown or {}).items():
+            model_costs[m] = model_costs.get(m, 0) + c
+
+    # Project name cleanup: '-Users-user-Projects-my-app' -> 'my-app'
+    def _clean_proj(name: str) -> str:
+        if "-Users-" in name:
+            name = name.split("-Users-")[-1]
+            # Drop username segment (first part before -)
+            parts = name.split("-", 1)
+            if len(parts) > 1:
+                name = parts[1]
+            # Drop 'Projects-' prefix if present
+            if name.startswith("Projects-"):
+                name = name[9:]
+        return name or "unknown"
+
+    proj_costs: dict[str, float] = {}
+    proj_raw: dict[str, str] = {}  # cleaned -> raw
+    for s in sessions:
+        cleaned = _clean_proj(s.project)
+        proj_costs[cleaned] = proj_costs.get(cleaned, 0) + s.total_cost
+        proj_raw[cleaned] = s.project
+    top_projects = sorted(proj_costs.items(), key=lambda x: -x[1])[:5]
+
+    long_sessions = sum(1 for s in sessions if s.duration_minutes > 90)
+    short_sessions = sum(1 for s in sessions if s.duration_minutes <= 45)
+    style = "Deep Diver" if long_sessions > total_sessions * 0.3 else "Sprinter" if short_sessions > total_sessions * 0.6 else "Balanced"
+
+    # Model efficiency: % of Opus spend on sessions that used complex tools (Agent, WebSearch, Plan)
+    opus_total = sum(c for m, c in model_costs.items() if "opus" in m.lower())
+    opus_justified = 0.0
+    complex_tool_names = {"Agent", "WebSearch", "WebFetch", "EnterPlanMode", "TodoWrite"}
+    for s in sessions:
+        opus_cost = sum(c for m, c in (s.model_breakdown or {}).items() if "opus" in m.lower())
+        if opus_cost > 0:
+            has_complex = any(s.tool_counts.get(t, 0) > 0 for t in complex_tool_names)
+            if has_complex or s.subagent_count > 0 or s.duration_minutes > 60:
+                opus_justified += opus_cost
+    model_efficiency = round(opus_justified / opus_total * 100) if opus_total > 0 else 100
+
+    peak_hour = max(range(24), key=lambda h: sum(1 for s in sessions if s.start_ts and s.start_ts[11:13] == f"{h:02d}")) if sessions else 0
+
+    session_dates = sorted(set((s.start_ts or "")[:10] for s in sessions if s.start_ts))
+    streak = 0
+    if session_dates:
+        current_streak = 1
+        for i in range(len(session_dates) - 1, 0, -1):
+            try:
+                d1 = datetime.strptime(session_dates[i], "%Y-%m-%d")
+                d2 = datetime.strptime(session_dates[i - 1], "%Y-%m-%d")
+                if (d1 - d2).days == 1:
+                    current_streak += 1
+                else:
+                    break
+            except ValueError:
+                break
+        streak = current_streak
+
+    now = datetime.now()
+    this_week = [s for s in sessions if s.start_ts and s.start_ts[:10] >= (now - timedelta(days=7)).strftime("%Y-%m-%d")]
+    last_week = [s for s in sessions if s.start_ts and (now - timedelta(days=14)).strftime("%Y-%m-%d") <= s.start_ts[:10] < (now - timedelta(days=7)).strftime("%Y-%m-%d")]
+    this_week_cost = sum(s.total_cost for s in this_week)
+    last_week_cost = sum(s.total_cost for s in last_week)
+    wow_change = ((this_week_cost - last_week_cost) / last_week_cost * 100) if last_week_cost > 0 else 0
+    this_week_sessions = len(this_week)
+    last_week_sessions = len(last_week)
+    this_week_frust = sum(s.frustration_count for s in this_week)
+    last_week_frust = sum(s.frustration_count for s in last_week)
+    this_week_avg_dur = sum(s.duration_minutes for s in this_week) / this_week_sessions if this_week_sessions else 0
+    last_week_avg_dur = sum(s.duration_minutes for s in last_week) / last_week_sessions if last_week_sessions else 0
+
+    # Frustration word aggregation (top 8)
+    frust_words: dict[str, int] = {}
+    for s in sessions:
+        for w, c in (s.frustration_words or {}).items():
+            frust_words[w] = frust_words.get(w, 0) + c
+    top_frustrations = sorted(frust_words.items(), key=lambda x: -x[1])[:8]
+
+    # WebFetch domain waste
+    wf_domains: dict[str, int] = {}
+    for s in sessions:
+        for d, c in (s.webfetch_domains or {}).items():
+            wf_domains[d] = wf_domains.get(d, 0) + c
+    github_fetches = sum(c for d, c in wf_domains.items() if "github" in d.lower())
+
+    # Unique finds
+    avg_cost_per_session = total_cost / total_sessions if total_sessions else 0
+    most_expensive_session = max(sessions, key=lambda s: s.total_cost) if sessions else None
+    max_session_cost = most_expensive_session.total_cost if most_expensive_session else 0
+
+    # ── Personality archetype ──
+    opus_pct = opus_total / total_cost * 100 if total_cost > 0 else 0
+    avg_dur = avg_session_min
+    sess_per_day = total_sessions / max(len(session_dates), 1)
+    bash_pct = tool_usage.get("Bash", 0) / total_tools * 100 if total_tools else 0
+    edit_pct = tool_usage.get("Edit", 0) / total_tools * 100 if total_tools else 0
+    web_pct = (tool_usage.get("WebSearch", 0) + tool_usage.get("WebFetch", 0)) / total_tools * 100 if total_tools else 0
+
+    # Determine archetype
+    if opus_pct > 70 and avg_dur > 60 and total_subagents > total_sessions * 0.3:
+        archetype = "The Architect"
+        archetype_desc = "Designs complex systems with deep sessions and heavy orchestration"
+        archetype_emoji = "🏛️"
+    elif sess_per_day > 8 and avg_dur < 40:
+        archetype = "The Speedrunner"
+        archetype_desc = "Burns through tasks in rapid-fire sessions with surgical precision"
+        archetype_emoji = "⚡"
+    elif web_pct > 15:
+        archetype = "The Explorer"
+        archetype_desc = "Always researching, fetching docs, and expanding the knowledge frontier"
+        archetype_emoji = "🔭"
+    elif edit_pct > 15 and frustration_rate < 5:
+        archetype = "The Craftsman"
+        archetype_desc = "Methodical editor who shapes code with patience and low friction"
+        archetype_emoji = "🔨"
+    elif bash_pct > 40:
+        archetype = "The Operator"
+        archetype_desc = "Lives in the terminal — scripts, deploys, and automates everything"
+        archetype_emoji = "🖥️"
+    elif long_sessions > total_sessions * 0.2:
+        archetype = "The Deep Diver"
+        archetype_desc = "Goes deep on hard problems with marathon sessions and relentless focus"
+        archetype_emoji = "🌊"
+    elif total_subagents > total_sessions * 0.5:
+        archetype = "The Commander"
+        archetype_desc = "Delegates aggressively — spawns agents like a fleet admiral"
+        archetype_emoji = "🎖️"
+    else:
+        archetype = "The Balanced"
+        archetype_desc = "Versatile generalist who adapts tools and models to the task at hand"
+        archetype_emoji = "⚖️"
+
+    # Trait scores (0-100)
+    trait_efficiency = min(100, round(cache_rate * 0.5 + model_efficiency * 0.5))
+    trait_intensity = min(100, round(min(avg_cost_per_session / 10 * 100, 100)))
+    trait_persistence = min(100, round(streak / 30 * 100))
+    trait_patience = min(100, max(0, round(100 - frustration_rate * 3)))
+    trait_velocity = min(100, round(sess_per_day / 15 * 100))
+    trait_depth = min(100, round(avg_dur / 120 * 100))
+
+    # Fun facts
+    fun_facts = []
+    total_hours = sum(s.duration_minutes for s in sessions) / 60
+    fun_facts.append(f"{round(total_hours)}h total coding time with Claude")
+    if total_tools > 10000:
+        fun_facts.append(f"{total_tools:,} tool calls — that's {round(total_tools / total_sessions)} per session")
+    if streak > 14:
+        fun_facts.append(f"{streak}-day streak — consistency is your superpower")
+    if github_fetches > 100:
+        fun_facts.append(f"{github_fetches} WebFetch calls to GitHub (try gh CLI!)")
+    if max_session_cost > 100:
+        fun_facts.append(f"Most expensive session: ${max_session_cost:.0f}")
+    top_tool = max(tool_usage.items(), key=lambda x: x[1])[0] if tool_usage else "Bash"
+    fun_facts.append(f"Favorite tool: {top_tool}")
+
+    profile = {
+        "total_cost": round(total_cost, 2),
+        "total_sessions": total_sessions,
+        "total_messages": total_messages,
+        "total_tokens": total_input + total_output + total_cache_read + total_cache_create,
+        "cache_rate": round(cache_rate, 1),
+        "avg_session_min": round(avg_session_min),
+        "total_tools_used": total_tools,
+        "frustration_rate": round(frustration_rate, 1),
+        "total_frustrations": total_frustrations,
+        "total_subagents": total_subagents,
+        "model_costs": {k: round(v, 2) for k, v in sorted(model_costs.items(), key=lambda x: -x[1])},
+        "top_projects": [[p, round(c, 2)] for p, c in top_projects],
+        "work_style": style,
+        "model_efficiency": model_efficiency,
+        "peak_hour": peak_hour,
+        "streak_days": streak,
+        "days_tracked": days,
+        "this_week_cost": round(this_week_cost, 2),
+        "last_week_cost": round(last_week_cost, 2),
+        "wow_change": round(wow_change, 1),
+        "this_week_sessions": this_week_sessions,
+        "last_week_sessions": last_week_sessions,
+        "this_week_frust": this_week_frust,
+        "last_week_frust": last_week_frust,
+        "this_week_avg_dur": round(this_week_avg_dur),
+        "last_week_avg_dur": round(last_week_avg_dur),
+        "long_sessions": long_sessions,
+        "top_frustrations": top_frustrations,
+        "github_fetches": github_fetches,
+        "avg_cost_per_session": round(avg_cost_per_session, 2),
+        "max_session_cost": round(max_session_cost, 2),
+        "archetype": archetype,
+        "archetype_desc": archetype_desc,
+        "archetype_emoji": archetype_emoji,
+        "traits": {
+            "Efficiency": trait_efficiency,
+            "Intensity": trait_intensity,
+            "Persistence": trait_persistence,
+            "Patience": trait_patience,
+            "Velocity": trait_velocity,
+            "Depth": trait_depth,
+        },
+        "fun_facts": fun_facts[:4],
+    }
+    # ── /Profile stats ───────────────────────────────────────────────────────
+
     data = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "state": state,
@@ -146,6 +369,7 @@ def _build_dashboard_data(config: Config | None = None, days: int = 30) -> str:
         "hourly_activity": hourly_activity,
         "cost_by_day": dict(sorted(cost_by_day.items())),
         "model_recommendation": model_rec,
+        "profile": profile,
     }
 
     data_json = json.dumps(data, default=str)

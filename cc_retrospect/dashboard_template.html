@@ -11,6 +11,7 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     *,
     *::before,
@@ -86,6 +87,215 @@
     }
 
     /* ── LAYOUT ─────────────────────────────────────────── */
+
+    /* ── PROFILE CARD ───────────────────────────────────── */
+    .pcard {
+      max-width: 580px;
+      margin: 0 auto;
+      background: linear-gradient(165deg, #080c1a 0%, #0d1229 40%, #0f1535 100%);
+      border: 1px solid rgba(79, 142, 247, 0.15);
+      border-radius: 20px;
+      padding: 32px 36px 24px;
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(167, 139, 250, 0.05),
+        0 20px 60px rgba(0, 0, 0, 0.4),
+        0 0 120px rgba(79, 142, 247, 0.06);
+    }
+    .pcard-glow {
+      position: absolute;
+      top: -60%;
+      left: -20%;
+      width: 140%;
+      height: 120%;
+      background: radial-gradient(ellipse at 30% 20%, rgba(79, 142, 247, 0.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, rgba(167, 139, 250, 0.06) 0%, transparent 40%);
+      pointer-events: none;
+    }
+    .pcard > * { position: relative; z-index: 1; }
+    .pcard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+    .pcard-brand { display: flex; align-items: center; gap: 12px; }
+    .pcard-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #eef2ff 0%, rgba(167, 139, 250, 0.9) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .pcard-subtitle {
+      font-size: 11px;
+      color: #5a6a8a;
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 1px;
+    }
+    .pcard-badge {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      padding: 5px 14px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(79, 142, 247, 0.15), rgba(167, 139, 250, 0.15));
+      border: 1px solid rgba(167, 139, 250, 0.2);
+      color: #a78bfa;
+      letter-spacing: 0.3px;
+    }
+    .pcard-hero { text-align: center; margin-bottom: 30px; }
+    .pcard-hero-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 64px;
+      font-weight: 700;
+      letter-spacing: -3px;
+      background: linear-gradient(135deg, #eef2ff 20%, #4f8ef7 60%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    .pcard-hero-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #5a6a8a;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+    .pcard-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-bottom: 24px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .pcard-stat {
+      padding: 16px 12px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.01);
+    }
+    .pcard-stat-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 700;
+      color: #eef2ff;
+      letter-spacing: -0.5px;
+    }
+    .pcard-stat-lbl {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #5a6a8a;
+      margin-top: 3px;
+      font-weight: 500;
+    }
+    .pcard-wow {
+      text-align: center;
+      margin-bottom: 24px;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .pcard-section {
+      margin-bottom: 20px;
+    }
+    .pcard-section-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #5a6a8a;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .pcard-model-bar {
+      display: flex;
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      gap: 2px;
+    }
+    .pcard-model-legend {
+      display: flex;
+      gap: 16px;
+      font-size: 11px;
+      color: #5a6a8a;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .pcard-model-legend span::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    .pcard-proj {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .pcard-proj-name {
+      width: 120px;
+      font-size: 12px;
+      color: #5a6a8a;
+      font-family: 'JetBrains Mono', monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .pcard-proj-bar {
+      flex: 1;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .pcard-proj-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s ease;
+    }
+    .pcard-proj-cost {
+      width: 60px;
+      text-align: right;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #eef2ff;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .pcard-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #3a4a6a;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      padding-top: 16px;
+      margin-top: 8px;
+    }
+    .pcard-footer strong {
+      font-weight: 700;
+
+      background: linear-gradient(135deg, #4f8ef7, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
     .wrap {
       max-width: 1340px;
       margin: 0 auto;
@@ -1340,6 +1550,7 @@
         </div>
         <button onclick="exportCSV()" class="btn-refresh" style="margin-right:6px">⬇ CSV</button>
         <button onclick="copyJSON()" class="btn-refresh" style="margin-right:6px">📋 JSON</button>
+        <button onclick="goToProfile()" class="btn-refresh" title="Profile card">📸 Profile</button>
         <button class="btn-theme" id="btn-theme" onclick="toggleTheme()" title="Toggle light/dark (d)">🌙</button>
         <button class="btn-refresh" id="btn-refresh" onclick="doReload()">↺ Refresh</button>
       </div>
@@ -1351,6 +1562,7 @@
       <button class="tab-btn" data-tab="compare">Compare</button>
       <button class="tab-btn" data-tab="reports">Reports</button>
       <button class="tab-btn" data-tab="config">Config</button>
+      <button class="tab-btn" data-tab="profile">Profile</button>
     </nav>
 
     <!-- ══ OVERVIEW TAB ══════════════════════════════════════ -->
@@ -1484,6 +1696,77 @@
         <div style="margin-top:8px;font-size:11px;color:var(--dim)">Editing ~/.cc-retrospect/config.env — changes apply on next reload.</div>
       </div>
     </div><!-- /config -->
+
+    <!-- ══ PROFILE TAB ══════════════════════════════════════ -->
+    <!-- ══ PROFILE TAB ══════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-profile">
+      <div style="display:flex;justify-content:center;gap:12px;margin-bottom:20px">
+        <button class="btn-refresh" onclick="captureProfileCard()">📸 Screenshot</button>
+        <button class="btn-refresh" onclick="copyProfileCard()">📋 Copy to Clipboard</button>
+      </div>
+
+      <div id="profile-card" class="pcard">
+        <div class="pcard-glow"></div>
+
+        <!-- Archetype header -->
+        <div style="text-align:center;position:relative;z-index:1;margin-bottom:24px">
+          <div id="pc-emoji" style="font-size:48px;margin-bottom:8px;filter:drop-shadow(0 0 20px rgba(79,142,247,0.4))"></div>
+          <div id="pc-archetype" style="font-size:28px;font-weight:700;letter-spacing:-1px;background:linear-gradient(135deg,#eef2ff 20%,#4f8ef7 60%,#a78bfa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2"></div>
+          <div id="pc-archetype-desc" style="font-size:12px;color:#5a6a8a;margin-top:6px;max-width:360px;margin-left:auto;margin-right:auto;line-height:1.5"></div>
+        </div>
+
+        <!-- Hero cost -->
+        <div style="text-align:center;position:relative;z-index:1;margin-bottom:24px">
+          <div id="pc-cost" style="font-family:'JetBrains Mono',monospace;font-size:52px;font-weight:700;letter-spacing:-2px;color:#eef2ff;line-height:1"></div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#5a6a8a;margin-top:4px;font-weight:500">in <span id="pc-days"></span> days</div>
+        </div>
+
+        <!-- Compact stats row -->
+        <div class="pcard-stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+          <div class="pcard-stat"><div class="pcard-stat-val" id="pc-sessions"></div><div class="pcard-stat-lbl">sessions</div></div>
+          <div class="pcard-stat"><div class="pcard-stat-val" id="pc-cache"></div><div class="pcard-stat-lbl">cache hit</div></div>
+          <div class="pcard-stat"><div class="pcard-stat-val" id="pc-efficiency"></div><div class="pcard-stat-lbl">model eff.</div></div>
+          <div class="pcard-stat"><div class="pcard-stat-val" id="pc-streak"></div><div class="pcard-stat-lbl">day streak</div></div>
+        </div>
+
+        <!-- Trait bars -->
+        <div class="pcard-section" style="position:relative;z-index:1">
+          <div class="pcard-section-title">Trait Profile</div>
+          <div id="pc-traits"></div>
+        </div>
+
+        <!-- Week-over-week -->
+        <div class="pcard-section" style="position:relative;z-index:1">
+          <div class="pcard-wow" id="pc-wow"></div>
+        </div>
+
+        <!-- Model split -->
+        <div class="pcard-section" style="position:relative;z-index:1">
+          <div class="pcard-section-title">Model Split</div>
+          <div class="pcard-model-bar" id="pc-model-bar"></div>
+          <div class="pcard-model-legend" id="pc-model-legend"></div>
+        </div>
+
+        <!-- Frustrations -->
+        <div class="pcard-section" style="position:relative;z-index:1">
+          <div class="pcard-section-title">Frustration Signals</div>
+          <div id="pc-frustrations" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+
+        <!-- Fun facts -->
+        <div class="pcard-section" style="position:relative;z-index:1">
+          <div class="pcard-section-title">Fun Facts</div>
+          <div id="pc-facts" style="font-size:12px;color:#8a9ab5;line-height:1.8"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="pcard-footer">
+          <span>powered by <strong>cc-retrospect</strong></span>
+          <span id="pc-date"></span>
+        </div>
+      </div>
+    </div><!-- /profile -->
+
 
     <div class="footer">cc-retrospect &middot; refresh <code>/cc-retrospect:dashboard</code> &middot; Ctrl+C to stop
     </div>
@@ -2015,6 +2298,7 @@
         if (btn.dataset.tab === 'compare') initCompare();
         if (btn.dataset.tab === 'reports') renderReports();
         if (btn.dataset.tab === 'config') initConfig();
+        if (btn.dataset.tab === 'profile') initProfile();
       });
     });
 
@@ -2352,6 +2636,144 @@
     }
 
     /* ── KEYBOARD SHORTCUTS ─────────────────── */
+
+    /* ── PROFILE CARD ───────────────────────── */
+    function initProfile() {
+      var P = D.profile || {};
+      if (!P.total_cost) {
+        document.getElementById('tab-profile').innerHTML = '<div class="empty">No profile data.</div>';
+        return;
+      }
+      var fmtNum = function(n) { return n >= 1000000 ? (n/1000000).toFixed(1) + 'M' : n >= 1000 ? (n/1000).toFixed(1) + 'K' : String(n); };
+
+      // Archetype
+      document.getElementById('pc-emoji').textContent = P.archetype_emoji || '\u2699\uFE0F';
+      document.getElementById('pc-archetype').textContent = P.archetype || 'Unknown';
+      document.getElementById('pc-archetype-desc').textContent = P.archetype_desc || '';
+
+      // Hero cost
+      document.getElementById('pc-cost').textContent = '$' + P.total_cost.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0});
+      document.getElementById('pc-days').textContent = P.days_tracked;
+
+      // Compact stats
+      document.getElementById('pc-sessions').textContent = fmtNum(P.total_sessions);
+      document.getElementById('pc-cache').textContent = P.cache_rate + '%';
+      document.getElementById('pc-efficiency').textContent = P.model_efficiency + '%';
+      document.getElementById('pc-streak').textContent = P.streak_days;
+      document.getElementById('pc-date').textContent = D.generated_at;
+
+      // Trait bars
+      var traits = P.traits || {};
+      var traitColors = {Efficiency:'#10d98a',Intensity:'#f43f5e',Persistence:'#4f8ef7',Patience:'#22d3ee',Velocity:'#fb923c',Depth:'#a78bfa'};
+      var traitHTML = '';
+      for (var t in traits) {
+        var val = traits[t];
+        var color = traitColors[t] || '#5a6a8a';
+        traitHTML += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
+          '<span style="width:75px;font-size:11px;color:#5a6a8a;text-align:right;font-family:JetBrains Mono,monospace">' + t + '</span>' +
+          '<div style="flex:1;height:8px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden">' +
+          '<div style="width:' + val + '%;height:100%;background:' + color + ';border-radius:4px;box-shadow:0 0 8px ' + color + '40;transition:width 0.8s ease"></div></div>' +
+          '<span style="width:28px;font-size:11px;color:#eef2ff;font-family:JetBrains Mono,monospace;font-weight:600;text-align:right">' + val + '</span></div>';
+      }
+      document.getElementById('pc-traits').innerHTML = traitHTML;
+
+      // Week-over-week
+      var wow = P.wow_change;
+      function wowBadge(before, after, invert) {
+        var pct = before > 0 ? ((after - before) / before * 100) : 0;
+        var dir = after < before ? '\u2193' : after > before ? '\u2191' : '\u2014';
+        var bad = invert ? (after > before) : (after < before);
+        var color = Math.abs(pct) < 1 ? '#5a6a8a' : bad ? '#f43f5e' : '#10d98a';
+        return '<span style="color:' + color + ';font-weight:600">' + dir + Math.abs(pct).toFixed(0) + '%</span>';
+      }
+      var wowRows = [
+        {label:'Cost', before:'$'+Math.round(P.last_week_cost).toLocaleString(), after:'$'+Math.round(P.this_week_cost).toLocaleString(), badge: wowBadge(P.last_week_cost, P.this_week_cost, true)},
+        {label:'Sessions', before:(P.last_week_sessions||0), after:(P.this_week_sessions||0), badge: wowBadge(P.last_week_sessions||0, P.this_week_sessions||0, false)},
+        {label:'Avg Dur', before:(P.last_week_avg_dur||0)+'m', after:(P.this_week_avg_dur||0)+'m', badge: wowBadge(P.last_week_avg_dur||0, P.this_week_avg_dur||0, true)},
+        {label:'Frust', before:(P.last_week_frust||0), after:(P.this_week_frust||0), badge: wowBadge(P.last_week_frust||0, P.this_week_frust||0, true)},
+      ];
+      document.getElementById('pc-wow').innerHTML =
+        '<div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#5a6a8a;margin-bottom:8px;font-weight:600">Week Over Week</div>' +
+        '<div style="display:grid;grid-template-columns:55px 1fr 14px 1fr auto;gap:2px 8px;font-size:11px;align-items:center">' +
+        wowRows.map(function(r) {
+          return '<span style="color:#5a6a8a;text-align:right;font-size:10px">' + r.label + '</span>' +
+            '<span style="color:#6a7a9a;text-align:right;font-family:JetBrains Mono,monospace">' + r.before + '</span>' +
+            '<span style="color:#3a4a6a;text-align:center">\u2192</span>' +
+            '<span style="color:#eef2ff;font-family:JetBrains Mono,monospace;font-weight:600">' + r.after + '</span>' +
+            r.badge;
+        }).join('') + '</div>';
+
+      // Model split
+      var modelColors = {'opus':'#a78bfa','sonnet':'#4f8ef7','haiku':'#22d3ee'};
+      function modelTag(name) { var n = name.toLowerCase(); return n.includes('opus') ? 'opus' : n.includes('haiku') ? 'haiku' : 'sonnet'; }
+      var mc = P.model_costs || {};
+      var mcTotal = Object.values(mc).reduce(function(a,b){return a+b;}, 0) || 1;
+      var mcAgg = {};
+      for (var m in mc) { var tag = modelTag(m); mcAgg[tag] = (mcAgg[tag] || 0) + mc[m]; }
+      var barHTML = '', legendHTML = '';
+      var mcEntries = Object.entries(mcAgg).sort(function(a,b){return b[1]-a[1];});
+      mcEntries.forEach(function(e) {
+        var tag = e[0], cost = e[1];
+        var pct = (cost / mcTotal * 100).toFixed(1);
+        var color = modelColors[tag] || '#5a6a8a';
+        barHTML += '<div style="width:' + pct + '%;background:' + color + ';border-radius:3px"></div>';
+        legendHTML += '<span style="color:' + color + '">' + tag + ' ' + Math.round(+pct) + '%</span>';
+      });
+      document.getElementById('pc-model-bar').innerHTML = barHTML;
+      document.getElementById('pc-model-legend').innerHTML = legendHTML;
+
+      // Frustrations
+      var frusts = P.top_frustrations || [];
+      if (frusts.length) {
+        document.getElementById('pc-frustrations').innerHTML = frusts.map(function(f) {
+          var size = Math.min(15, Math.max(11, 11 + f[1] / 15));
+          return '<span style="background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.2);border-radius:6px;padding:3px 10px;font-size:' + size + 'px;font-family:JetBrains Mono,monospace;color:#f43f5e">' + f[0] + ' <span style="color:#8a4a5a;font-size:9px">' + f[1] + '</span></span>';
+        }).join('');
+      } else {
+        document.getElementById('pc-frustrations').innerHTML = '<span style="color:#3a5a4a;font-size:12px">Zero frustration signals</span>';
+      }
+
+      // Fun facts
+      var facts = P.fun_facts || [];
+      document.getElementById('pc-facts').innerHTML = facts.map(function(f) {
+        return '<div style="margin-bottom:2px;padding-left:14px;position:relative"><span style="position:absolute;left:0;color:#4f8ef7">\u25B8</span>' + f + '</div>';
+      }).join('');
+    }
+
+    function goToProfile() {
+      document.querySelectorAll(".tab-btn").forEach(function(b) { b.classList.remove("active"); });
+      document.querySelectorAll(".tab-panel").forEach(function(p) { p.classList.remove("active"); });
+      var profileBtn = document.querySelector(".tab-btn[data-tab=\"profile\"]");
+      if (profileBtn) profileBtn.classList.add("active");
+      document.getElementById("tab-profile").classList.add("active");
+      initProfile();
+    }
+
+    function captureProfileCard() {
+      html2canvas(document.getElementById('profile-card'), {
+        backgroundColor: '#04060d', scale: 2, useCORS: true, logging: false,
+      }).then(function(canvas) {
+        var link = document.createElement('a');
+        link.download = 'cc-retrospect-profile.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+
+    function copyProfileCard() {
+      html2canvas(document.getElementById('profile-card'), {
+        backgroundColor: '#04060d', scale: 2, useCORS: true, logging: false,
+      }).then(function(canvas) {
+        canvas.toBlob(function(blob) {
+          navigator.clipboard.write([new ClipboardItem({'image/png': blob})]).then(function() {
+            var btns = document.querySelectorAll('#tab-profile .btn-refresh');
+            if (btns[1]) { btns[1].textContent = '\u2713 Copied!'; setTimeout(function() { btns[1].textContent = '\ud83d\udccb Copy to Clipboard'; }, 2000); }
+          });
+        });
+      });
+    }
+
+
     let _focusedSessIdx = -1;
 
     document.addEventListener('keydown', e => {
@@ -2364,7 +2786,7 @@
       if (e.key === '?') { modal.style.display = modal.style.display === 'none' ? 'flex' : 'none'; return; }
       if (e.key === 'd') { toggleTheme(); return; }
       if (e.key === '/') { e.preventDefault(); document.getElementById('sess-search')?.focus(); return; }
-      if (/^[1-4]$/.test(e.key)) {
+      if (/^[1-5]$/.test(e.key)) {
         const tabs = document.querySelectorAll('.tab-btn');
         if (tabs[+e.key-1]) tabs[+e.key-1].click();
         return;

@@ -252,11 +252,19 @@ def _build_dashboard_data(config: Config | None = None, days: int = 30) -> str:
     edit_pct = tool_usage.get("Edit", 0) / total_tools * 100 if total_tools else 0
     web_pct = (tool_usage.get("WebSearch", 0) + tool_usage.get("WebFetch", 0)) / total_tools * 100 if total_tools else 0
 
-    # Determine archetype
-    if opus_pct > 70 and avg_dur > 60 and total_subagents > total_sessions * 0.3:
+    # Determine archetype — ordered most-specific first
+    if opus_pct > 75 and sess_per_day > 20:
+        archetype = "The Opus Maximalist"
+        archetype_desc = f"Runs premium AI at {round(opus_pct)}% — {round(sess_per_day)} sessions/day, no compromises"
+        archetype_emoji = "💜"
+    elif opus_pct > 70 and avg_dur > 60 and total_subagents > total_sessions * 0.3:
         archetype = "The Architect"
         archetype_desc = "Designs complex systems with deep sessions and heavy orchestration"
         archetype_emoji = "🏛️"
+    elif sess_per_day > 25 and streak > 20:
+        archetype = "The Daily Grinder"
+        archetype_desc = f"{round(sess_per_day)} sessions/day, {streak}-day streak — Claude is your oxygen"
+        archetype_emoji = "🔥"
     elif sess_per_day > 8 and avg_dur < 40:
         archetype = "The Speedrunner"
         archetype_desc = "Burns through tasks in rapid-fire sessions with surgical precision"
@@ -281,10 +289,14 @@ def _build_dashboard_data(config: Config | None = None, days: int = 30) -> str:
         archetype = "The Commander"
         archetype_desc = "Delegates aggressively — spawns agents like a fleet admiral"
         archetype_emoji = "🎖️"
+    elif opus_pct > 60 and total_cost > 1000:
+        archetype = "The Relentless Builder"
+        archetype_desc = f"${round(total_cost):,} spent, {total_sessions} sessions — shipping non-stop"
+        archetype_emoji = "🚀"
     else:
-        archetype = "The Balanced"
-        archetype_desc = "Versatile generalist who adapts tools and models to the task at hand"
-        archetype_emoji = "⚖️"
+        archetype = "The Pragmatist"
+        archetype_desc = "Adapts model and tool choices precisely to the task at hand"
+        archetype_emoji = "🎯"
 
     # Trait scores (0-100)
     trait_efficiency = min(100, round(cache_rate * 0.5 + model_efficiency * 0.5))

@@ -12,6 +12,7 @@
     rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
   <style>
     *,
     *::before,
@@ -290,12 +291,45 @@
     }
     .pcard-footer strong {
       font-weight: 700;
-
       background: linear-gradient(135deg, #4f8ef7, #a78bfa);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
+    /* ── PC2 SOCIAL CARD v2 ─────────────────────────── */
+    @keyframes pcGlowPulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+    @keyframes pcFadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .pc2-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:14px }
+    .pc2-brand { font-size:12px;font-weight:700;letter-spacing:-.2px;background:linear-gradient(135deg,#4f8ef7,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text }
+    .pc2-badge { font-size:10px;font-family:'JetBrains Mono',monospace;color:#3a4a6a;letter-spacing:.5px }
+    .pc2-archetype { display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 16px;background:rgba(79,142,247,.05);border:1px solid rgba(79,142,247,.12);border-radius:14px }
+    .pc2-emoji { font-size:34px;filter:drop-shadow(0 0 12px rgba(79,142,247,.5));flex-shrink:0;animation:pcGlowPulse 3s ease-in-out infinite }
+    .pc2-arch-name { font-size:17px;font-weight:700;letter-spacing:-.5px;background:linear-gradient(135deg,#eef2ff 20%,#4f8ef7 60%,#a78bfa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2 }
+    .pc2-arch-desc { font-size:11px;color:#5a6a8a;margin-top:3px;line-height:1.4 }
+    .pc2-hero { display:flex;align-items:center;justify-content:space-around;margin-bottom:16px;padding:14px 12px;background:rgba(255,255,255,.02);border-radius:12px;border:1px solid rgba(255,255,255,.04) }
+    .pc2-hero-stat { text-align:center }
+    .pc2-hero-val { font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:#eef2ff;letter-spacing:-1px;line-height:1 }
+    .pc2-hero-lbl { font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:#5a6a8a;margin-top:3px }
+    .pc2-hero-div { width:1px;height:36px;background:rgba(255,255,255,.06) }
+    .pc2-wow-hdr { font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#5a6a8a;margin-bottom:8px;font-weight:600 }
+    .pc2-wow-grid { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px }
+    .pc2-wow-tile { padding:10px 12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:10px;animation:pcFadeUp .5s ease forwards }
+    .pc2-wow-tile.bad  { background:rgba(244,63,94,.09); border-color:rgba(244,63,94,.35);  border-left:3px solid rgba(244,63,94,.7) }
+    .pc2-wow-tile.good { background:rgba(16,217,138,.07); border-color:rgba(16,217,138,.3); border-left:3px solid rgba(16,217,138,.6) }
+    .pc2-wow-tile:nth-child(2){animation-delay:.08s}
+    .pc2-wow-tile:nth-child(3){animation-delay:.16s}
+    .pc2-wow-tile:nth-child(4){animation-delay:.24s}
+    .pc2-tile-lbl { font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#5a6a8a;margin-bottom:5px;font-weight:600 }
+    .pc2-tile-val { font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#eef2ff;letter-spacing:-.5px;line-height:1;margin-bottom:4px }
+    .pc2-tile-meta { font-size:10px;font-family:'JetBrains Mono',monospace;color:#4a5a7a }
+    .pc2-tile-delta { font-weight:700;font-size:13px }
+    .pc2-bottom { display:flex;gap:10px;align-items:stretch;margin-bottom:14px }
+    .pc2-model-block { flex:1;padding:10px 12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-radius:10px }
+    .pc2-mini-lbl { font-size:8px;text-transform:uppercase;letter-spacing:1.2px;color:#5a6a8a;margin-bottom:7px;font-weight:600 }
+    .pc2-eff-block { display:flex;flex-direction:column;gap:6px;min-width:70px }
+    .pc2-eff-tile { padding:8px 10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-radius:8px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center }
+    .pc2-eff-val { font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:#10d98a;line-height:1 }
+    .pc2-eff-lbl { font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:#5a6a8a;margin-top:2px }
     .wrap {
       max-width: 1340px;
       margin: 0 auto;
@@ -1568,11 +1602,23 @@
     <!-- ══ OVERVIEW TAB ══════════════════════════════════════ -->
     <div class="tab-panel active" id="tab-overview">
 
+      <!-- AI INSIGHTS (lazy-loaded) -->
+      <div id="ai-insights-wrap" style="margin-bottom:20px;display:none">
+        <div class="card" style="--card-accent:var(--purple)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin:0">🤖 AI Insights <span id="ai-insights-age" style="font-size:10px;color:var(--muted);font-weight:400"></span></div>
+            <button class="btn-refresh" id="ai-insights-btn" onclick="generateInsights()">✨ Refresh</button>
+          </div>
+          <div id="ai-insights-content" style="font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;max-height:400px;overflow-y:auto"></div>
+        </div>
+      </div>
+
       <!-- BUDGET -->
       <div class="budget" id="budget"></div>
 
       <!-- STATS -->
       <div class="stats" id="stats"></div>
+      <div id="wow-insight" style="margin-bottom:20px"></div>
 
       <!-- GRID -->
       <div class="grid">
@@ -1698,72 +1744,99 @@
     </div><!-- /config -->
 
     <!-- ══ PROFILE TAB ══════════════════════════════════════ -->
-    <!-- ══ PROFILE TAB ══════════════════════════════════════ -->
     <div class="tab-panel" id="tab-profile">
-      <div style="display:flex;justify-content:center;gap:12px;margin-bottom:20px">
-        <button class="btn-refresh" onclick="captureProfileCard()">📸 Screenshot</button>
-        <button class="btn-refresh" onclick="copyProfileCard()">📋 Copy to Clipboard</button>
+      <div style="display:flex;justify-content:center;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+        <button class="btn-refresh" onclick="captureProfileCard()">📸 Save PNG</button>
+        <button class="btn-refresh" onclick="downloadProfileGif()">🎞 Save GIF</button>
+        <button class="btn-refresh" onclick="copyProfileCard()">📋 Copy</button>
       </div>
 
       <div id="profile-card" class="pcard">
-        <div class="pcard-glow"></div>
+        <div class="pcard-glow" style="animation:pcGlowPulse 4s ease-in-out infinite"></div>
 
-        <!-- Archetype header -->
-        <div style="text-align:center;position:relative;z-index:1;margin-bottom:24px">
-          <div id="pc-emoji" style="font-size:48px;margin-bottom:8px;filter:drop-shadow(0 0 20px rgba(79,142,247,0.4))"></div>
-          <div id="pc-archetype" style="font-size:28px;font-weight:700;letter-spacing:-1px;background:linear-gradient(135deg,#eef2ff 20%,#4f8ef7 60%,#a78bfa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2"></div>
-          <div id="pc-archetype-desc" style="font-size:12px;color:#5a6a8a;margin-top:6px;max-width:360px;margin-left:auto;margin-right:auto;line-height:1.5"></div>
+        <!-- Header -->
+        <div class="pc2-header">
+          <div class="pc2-brand">⚡ cc-retrospect</div>
+          <div class="pc2-badge" id="pc-date"></div>
         </div>
 
-        <!-- Hero cost -->
-        <div style="text-align:center;position:relative;z-index:1;margin-bottom:24px">
-          <div id="pc-cost" style="font-family:'JetBrains Mono',monospace;font-size:52px;font-weight:700;letter-spacing:-2px;color:#eef2ff;line-height:1"></div>
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#5a6a8a;margin-top:4px;font-weight:500">in <span id="pc-days"></span> days</div>
+        <!-- Archetype -->
+        <div class="pc2-archetype">
+          <div id="pc-emoji" class="pc2-emoji"></div>
+          <div>
+            <div id="pc-archetype" class="pc2-arch-name"></div>
+            <div id="pc-archetype-desc" class="pc2-arch-desc"></div>
+          </div>
         </div>
 
-        <!-- Compact stats row -->
-        <div class="pcard-stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
-          <div class="pcard-stat"><div class="pcard-stat-val" id="pc-sessions"></div><div class="pcard-stat-lbl">sessions</div></div>
-          <div class="pcard-stat"><div class="pcard-stat-val" id="pc-cache"></div><div class="pcard-stat-lbl">cache hit</div></div>
-          <div class="pcard-stat"><div class="pcard-stat-val" id="pc-efficiency"></div><div class="pcard-stat-lbl">model eff.</div></div>
-          <div class="pcard-stat"><div class="pcard-stat-val" id="pc-streak"></div><div class="pcard-stat-lbl">day streak</div></div>
+        <!-- Hero row: cost | sessions | streak -->
+        <div class="pc2-hero">
+          <div class="pc2-hero-stat">
+            <div id="pc-cost" class="pc2-hero-val"></div>
+            <div class="pc2-hero-lbl">total spent</div>
+          </div>
+          <div class="pc2-hero-div"></div>
+          <div class="pc2-hero-stat">
+            <div id="pc-sessions" class="pc2-hero-val"></div>
+            <div class="pc2-hero-lbl">sessions</div>
+          </div>
+          <div class="pc2-hero-div"></div>
+          <div class="pc2-hero-stat">
+            <div id="pc-streak" class="pc2-hero-val"></div>
+            <div class="pc2-hero-lbl">day streak 🔥</div>
+          </div>
         </div>
 
-        <!-- Trait bars -->
-        <div class="pcard-section" style="position:relative;z-index:1">
-          <div class="pcard-section-title">Trait Profile</div>
-          <div id="pc-traits"></div>
-        </div>
+        <!-- Week-over-week — the star -->
+        <div class="pc2-wow-hdr">📈 this week vs last week</div>
+        <div class="pc2-wow-grid" id="pc-wow"></div>
 
-        <!-- Week-over-week -->
-        <div class="pcard-section" style="position:relative;z-index:1">
-          <div class="pcard-wow" id="pc-wow"></div>
-        </div>
-
-        <!-- Model split -->
-        <div class="pcard-section" style="position:relative;z-index:1">
-          <div class="pcard-section-title">Model Split</div>
-          <div class="pcard-model-bar" id="pc-model-bar"></div>
-          <div class="pcard-model-legend" id="pc-model-legend"></div>
-        </div>
-
-        <!-- Frustrations -->
-        <div class="pcard-section" style="position:relative;z-index:1">
-          <div class="pcard-section-title">Frustration Signals</div>
-          <div id="pc-frustrations" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-        </div>
-
-        <!-- Fun facts -->
-        <div class="pcard-section" style="position:relative;z-index:1">
-          <div class="pcard-section-title">Fun Facts</div>
-          <div id="pc-facts" style="font-size:12px;color:#8a9ab5;line-height:1.8"></div>
+        <!-- Bottom: model split + efficiency tiles -->
+        <div class="pc2-bottom">
+          <div class="pc2-model-block">
+            <div class="pc2-mini-lbl">model split</div>
+            <div class="pcard-model-bar" id="pc-model-bar" style="height:8px;margin-bottom:7px"></div>
+            <div id="pc-model-legend" class="pcard-model-legend" style="font-size:10px"></div>
+          </div>
+          <div class="pc2-eff-block">
+            <div class="pc2-eff-tile">
+              <div id="pc-cache" class="pc2-eff-val"></div>
+              <div class="pc2-eff-lbl">cache 💾</div>
+            </div>
+            <div class="pc2-eff-tile">
+              <div id="pc-efficiency" class="pc2-eff-val"></div>
+              <div class="pc2-eff-lbl">model eff ✨</div>
+            </div>
+          </div>
         </div>
 
         <!-- Footer -->
         <div class="pcard-footer">
           <span>powered by <strong>cc-retrospect</strong></span>
-          <span id="pc-date"></span>
+          <span><span id="pc-days"></span> days tracked</span>
         </div>
+      </div>
+      <!-- Full details (page view only, not exported) -->
+      <div id="pc-details" style="max-width:580px;margin:24px auto 0">
+
+        <!-- Trait bars -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#5a6a8a;margin-bottom:10px;font-weight:600">Trait Profile</div>
+          <div id="pc-traits"></div>
+        </div>
+
+        <!-- Frustration signals -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#5a6a8a;margin-bottom:10px;font-weight:600">😤 Frustration Signals</div>
+          <div id="pc-frustrations" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+
+        <!-- Fun facts -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#5a6a8a;margin-bottom:10px;font-weight:600">Fun Facts</div>
+          <div id="pc-facts" style="font-size:12px;color:#8a9ab5;line-height:1.8"></div>
+        </div>
+
       </div>
     </div><!-- /profile -->
 
@@ -1909,6 +1982,36 @@
       sparkEl.style.cssText = 'margin-top:8px;opacity:0.7';
       sparkEl.innerHTML = `<svg width="120" height="22" style="overflow:visible"><polyline points="${spPts}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"/></svg><div style="font-size:9px;color:var(--muted);margin-top:2px">7-day trend</div>`;
       el.appendChild(sparkEl);
+    })();
+
+    /* ── WoW INSIGHT STRIP ──────────────────── */
+    (function() {
+      var P = D.profile || {};
+      if (!P.total_cost) return;
+      var lw=P.last_week_cost||0, tw=P.this_week_cost||0;
+      var ls=P.last_week_sessions||0, ts=P.this_week_sessions||0;
+      var lf=P.last_week_frust||0, tf=P.this_week_frust||0;
+      var ld=P.last_week_avg_dur||0, td=P.this_week_avg_dur||0;
+      function pctDelta(b, a) { return b > 0 ? (a - b) / b * 100 : 0; }
+      var metrics = [
+        {label:'Cost', pct: pctDelta(lw,tw), fmt: '$'+Math.round(tw), invert:true, emoji:'💸'},
+        {label:'Sessions', pct: pctDelta(ls,ts), fmt: ts+' sess', invert:false, emoji:'🔁'},
+        {label:'Avg Dur', pct: pctDelta(ld,td), fmt: td+'m', invert:true, emoji:'⏱'},
+        {label:'Frustrations', pct: pctDelta(lf,tf), fmt: tf+' frust', invert:true, emoji:'😤'},
+      ];
+      var items = metrics.map(function(m) {
+        var dir = m.pct > 0 ? '↑' : m.pct < 0 ? '↓' : '—';
+        var good = m.invert ? m.pct <= 0 : m.pct >= 0;
+        var color = Math.abs(m.pct) < 1 ? 'var(--muted)' : good ? 'var(--green)' : 'var(--red)';
+        var bg = Math.abs(m.pct) < 1 ? 'rgba(255,255,255,.02)' : good ? 'rgba(16,217,138,.06)' : 'rgba(244,63,94,.07)';
+        return '<div style="flex:1;min-width:120px;padding:10px 14px;background:'+bg+';border-radius:10px;border:1px solid rgba(255,255,255,.06)">' +
+          '<div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px">'+m.emoji+' '+m.label+'</div>' +
+          '<div style="font-family:JetBrains Mono,monospace;font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.5px">'+m.fmt+'</div>' +
+          '<div style="font-size:11px;color:'+color+';font-weight:600;margin-top:2px">'+dir+Math.abs(m.pct).toFixed(0)+'% vs last week</div>' +
+          '</div>';
+      }).join('');
+      var el = document.getElementById('wow-insight');
+      if (el) el.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap">' + items + '</div>';
     })();
 
     /* ── STATS ──────────────────────────────── */
@@ -2644,137 +2747,206 @@
         document.getElementById('tab-profile').innerHTML = '<div class="empty">No profile data.</div>';
         return;
       }
-      var fmtNum = function(n) { return n >= 1000000 ? (n/1000000).toFixed(1) + 'M' : n >= 1000 ? (n/1000).toFixed(1) + 'K' : String(n); };
+      var fmtNum = function(n) { return n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(0)+'K' : String(n); };
 
-      // Archetype
-      document.getElementById('pc-emoji').textContent = P.archetype_emoji || '\u2699\uFE0F';
+      document.getElementById('pc-date').textContent = D.generated_at || '';
+      document.getElementById('pc-emoji').textContent = P.archetype_emoji || '\u26A1';
       document.getElementById('pc-archetype').textContent = P.archetype || 'Unknown';
       document.getElementById('pc-archetype-desc').textContent = P.archetype_desc || '';
-
-      // Hero cost
-      document.getElementById('pc-cost').textContent = '$' + P.total_cost.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0});
-      document.getElementById('pc-days').textContent = P.days_tracked;
-
-      // Compact stats
+      document.getElementById('pc-cost').textContent = '$' + Math.round(P.total_cost).toLocaleString();
       document.getElementById('pc-sessions').textContent = fmtNum(P.total_sessions);
+      document.getElementById('pc-streak').textContent = P.streak_days;
+      document.getElementById('pc-days').textContent = P.days_tracked;
       document.getElementById('pc-cache').textContent = P.cache_rate + '%';
       document.getElementById('pc-efficiency').textContent = P.model_efficiency + '%';
-      document.getElementById('pc-streak').textContent = P.streak_days;
-      document.getElementById('pc-date').textContent = D.generated_at;
 
-      // Trait bars
-      var traits = P.traits || {};
-      var traitColors = {Efficiency:'#10d98a',Intensity:'#f43f5e',Persistence:'#4f8ef7',Patience:'#22d3ee',Velocity:'#fb923c',Depth:'#a78bfa'};
-      var traitHTML = '';
-      for (var t in traits) {
-        var val = traits[t];
-        var color = traitColors[t] || '#5a6a8a';
-        traitHTML += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
-          '<span style="width:75px;font-size:11px;color:#5a6a8a;text-align:right;font-family:JetBrains Mono,monospace">' + t + '</span>' +
-          '<div style="flex:1;height:8px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden">' +
-          '<div style="width:' + val + '%;height:100%;background:' + color + ';border-radius:4px;box-shadow:0 0 8px ' + color + '40;transition:width 0.8s ease"></div></div>' +
-          '<span style="width:28px;font-size:11px;color:#eef2ff;font-family:JetBrains Mono,monospace;font-weight:600;text-align:right">' + val + '</span></div>';
+      // WoW 2×2 tiles
+      function wowTile(emoji, label, rb, ra, fb, fa, invert) {
+        var pct = rb > 0 ? ((ra - rb) / rb * 100) : 0;
+        var dir = ra < rb ? '\u2193' : ra > rb ? '\u2191' : '\u2014';
+        var good = invert === null ? null : invert ? (ra <= rb) : (ra >= rb);
+        var color = (good === null || Math.abs(pct) < 1) ? '#5a6a8a' : good ? '#10d98a' : '#f43f5e';
+        var tileClass = (good === null || Math.abs(pct) < 1) ? '' : good ? ' good' : ' bad';
+        return '<div class="pc2-wow-tile' + tileClass + '">' +
+          '<div class="pc2-tile-lbl">' + emoji + ' ' + label + '</div>' +
+          '<div class="pc2-tile-val">' + fa + '</div>' +
+          '<div class="pc2-tile-meta"><span class="pc2-tile-delta" style="color:' + color + '">' + dir + Math.abs(pct).toFixed(0) + '%</span> &nbsp;was ' + fb + '</div>' +
+          '</div>';
       }
-      document.getElementById('pc-traits').innerHTML = traitHTML;
-
-      // Week-over-week
-      var wow = P.wow_change;
-      function wowBadge(before, after, invert) {
-        var pct = before > 0 ? ((after - before) / before * 100) : 0;
-        var dir = after < before ? '\u2193' : after > before ? '\u2191' : '\u2014';
-        var bad = invert ? (after > before) : (after < before);
-        var color = Math.abs(pct) < 1 ? '#5a6a8a' : bad ? '#f43f5e' : '#10d98a';
-        return '<span style="color:' + color + ';font-weight:600">' + dir + Math.abs(pct).toFixed(0) + '%</span>';
-      }
-      var wowRows = [
-        {label:'Cost', before:'$'+Math.round(P.last_week_cost).toLocaleString(), after:'$'+Math.round(P.this_week_cost).toLocaleString(), badge: wowBadge(P.last_week_cost, P.this_week_cost, true)},
-        {label:'Sessions', before:(P.last_week_sessions||0), after:(P.this_week_sessions||0), badge: wowBadge(P.last_week_sessions||0, P.this_week_sessions||0, false)},
-        {label:'Avg Dur', before:(P.last_week_avg_dur||0)+'m', after:(P.this_week_avg_dur||0)+'m', badge: wowBadge(P.last_week_avg_dur||0, P.this_week_avg_dur||0, true)},
-        {label:'Frust', before:(P.last_week_frust||0), after:(P.this_week_frust||0), badge: wowBadge(P.last_week_frust||0, P.this_week_frust||0, true)},
-      ];
+      var lw=P.last_week_cost||0, tw=P.this_week_cost||0;
+      var ls=P.last_week_sessions||0, ts=P.this_week_sessions||0;
+      var ld=P.last_week_avg_dur||0, td=P.this_week_avg_dur||0;
+      var lf=P.last_week_frust||0, tf=P.this_week_frust||0;
       document.getElementById('pc-wow').innerHTML =
-        '<div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#5a6a8a;margin-bottom:8px;font-weight:600">Week Over Week</div>' +
-        '<div style="display:grid;grid-template-columns:55px 1fr 14px 1fr auto;gap:2px 8px;font-size:11px;align-items:center">' +
-        wowRows.map(function(r) {
-          return '<span style="color:#5a6a8a;text-align:right;font-size:10px">' + r.label + '</span>' +
-            '<span style="color:#6a7a9a;text-align:right;font-family:JetBrains Mono,monospace">' + r.before + '</span>' +
-            '<span style="color:#3a4a6a;text-align:center">\u2192</span>' +
-            '<span style="color:#eef2ff;font-family:JetBrains Mono,monospace;font-weight:600">' + r.after + '</span>' +
-            r.badge;
-        }).join('') + '</div>';
+        wowTile('\uD83D\uDCB8','Cost', lw, tw, '$'+Math.round(lw), '$'+Math.round(tw), true) +
+        wowTile('\uD83D\uDD01','Sessions', ls, ts, ls, ts, null) +
+        wowTile('\u23F1','Avg Duration', ld, td, ld+'m', td+'m', true) +
+        wowTile('\uD83D\uDE24','Frustrations', lf, tf, lf, tf, true);
 
       // Model split
       var modelColors = {'opus':'#a78bfa','sonnet':'#4f8ef7','haiku':'#22d3ee'};
-      function modelTag(name) { var n = name.toLowerCase(); return n.includes('opus') ? 'opus' : n.includes('haiku') ? 'haiku' : 'sonnet'; }
-      var mc = P.model_costs || {};
-      var mcTotal = Object.values(mc).reduce(function(a,b){return a+b;}, 0) || 1;
-      var mcAgg = {};
-      for (var m in mc) { var tag = modelTag(m); mcAgg[tag] = (mcAgg[tag] || 0) + mc[m]; }
-      var barHTML = '', legendHTML = '';
-      var mcEntries = Object.entries(mcAgg).sort(function(a,b){return b[1]-a[1];});
-      mcEntries.forEach(function(e) {
-        var tag = e[0], cost = e[1];
-        var pct = (cost / mcTotal * 100).toFixed(1);
-        var color = modelColors[tag] || '#5a6a8a';
-        barHTML += '<div style="width:' + pct + '%;background:' + color + ';border-radius:3px"></div>';
-        legendHTML += '<span style="color:' + color + '">' + tag + ' ' + Math.round(+pct) + '%</span>';
+      function modelTag(n) { var nl=n.toLowerCase(); return nl.includes('opus')?'opus':nl.includes('haiku')?'haiku':'sonnet'; }
+      var mc=P.model_costs||{}, mcT=Object.values(mc).reduce(function(a,b){return a+b;},0)||1, mcA={};
+      for (var m in mc) { var t=modelTag(m); mcA[t]=(mcA[t]||0)+mc[m]; }
+      var bH='', lH='';
+      Object.entries(mcA).sort(function(a,b){return b[1]-a[1];}).forEach(function(e) {
+        var p=(e[1]/mcT*100).toFixed(1), c=modelColors[e[0]]||'#5a6a8a';
+        bH+='<div style="width:'+p+'%;background:'+c+';border-radius:3px"></div>';
+        lH+='<span style="color:'+c+'">'+e[0]+' '+Math.round(+p)+'%</span>';
       });
-      document.getElementById('pc-model-bar').innerHTML = barHTML;
-      document.getElementById('pc-model-legend').innerHTML = legendHTML;
+      document.getElementById('pc-model-bar').innerHTML=bH;
+      document.getElementById('pc-model-legend').innerHTML=lH;
 
-      // Frustrations
-      var frusts = P.top_frustrations || [];
-      if (frusts.length) {
-        document.getElementById('pc-frustrations').innerHTML = frusts.map(function(f) {
-          var size = Math.min(15, Math.max(11, 11 + f[1] / 15));
-          return '<span style="background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.2);border-radius:6px;padding:3px 10px;font-size:' + size + 'px;font-family:JetBrains Mono,monospace;color:#f43f5e">' + f[0] + ' <span style="color:#8a4a5a;font-size:9px">' + f[1] + '</span></span>';
-        }).join('');
-      } else {
-        document.getElementById('pc-frustrations').innerHTML = '<span style="color:#3a5a4a;font-size:12px">Zero frustration signals</span>';
+      // Details section (page view only)
+      var traits = P.traits || {};
+      var traitColors = {Efficiency:'#10d98a',Intensity:'#f43f5e',Persistence:'#4f8ef7',Patience:'#22d3ee',Velocity:'#fb923c',Depth:'#a78bfa'};
+      var tHTML = '';
+      for (var tr in traits) {
+        var val = traits[tr], col = traitColors[tr] || '#5a6a8a';
+        tHTML += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">' +
+          '<span style="width:72px;font-size:11px;color:#5a6a8a;text-align:right;font-family:JetBrains Mono,monospace">' + tr + '</span>' +
+          '<div style="flex:1;height:8px;background:rgba(255,255,255,.04);border-radius:4px;overflow:hidden">' +
+          '<div style="width:'+val+'%;height:100%;background:'+col+';border-radius:4px;box-shadow:0 0 8px '+col+'40;transition:width 0.8s ease"></div></div>' +
+          '<span style="width:28px;font-size:11px;color:#eef2ff;font-family:JetBrains Mono,monospace;font-weight:600;text-align:right">'+val+'</span></div>';
       }
+      document.getElementById('pc-traits').innerHTML = tHTML;
 
-      // Fun facts
+      var frusts = P.top_frustrations || [];
+      document.getElementById('pc-frustrations').innerHTML = frusts.length
+        ? frusts.map(function(f) {
+            var sz = Math.min(14, Math.max(11, 11 + f[1] / 15));
+            return '<span style="background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.2);border-radius:6px;padding:3px 10px;font-size:'+sz+'px;font-family:JetBrains Mono,monospace;color:#f43f5e">'+f[0]+' <span style="color:#8a4a5a;font-size:9px">'+f[1]+'</span></span>';
+          }).join('')
+        : '<span style="color:#3a5a4a;font-size:12px">Zero frustration signals ✅</span>';
+
       var facts = P.fun_facts || [];
       document.getElementById('pc-facts').innerHTML = facts.map(function(f) {
-        return '<div style="margin-bottom:2px;padding-left:14px;position:relative"><span style="position:absolute;left:0;color:#4f8ef7">\u25B8</span>' + f + '</div>';
+        return '<div style="margin-bottom:3px;padding-left:14px;position:relative"><span style="position:absolute;left:0;color:#4f8ef7">▸</span>'+f+'</div>';
       }).join('');
     }
 
     function goToProfile() {
-      document.querySelectorAll(".tab-btn").forEach(function(b) { b.classList.remove("active"); });
-      document.querySelectorAll(".tab-panel").forEach(function(p) { p.classList.remove("active"); });
-      var profileBtn = document.querySelector(".tab-btn[data-tab=\"profile\"]");
-      if (profileBtn) profileBtn.classList.add("active");
-      document.getElementById("tab-profile").classList.add("active");
+      document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+      document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
+      var btn = document.querySelector('.tab-btn[data-tab="profile"]');
+      if (btn) btn.classList.add('active');
+      document.getElementById('tab-profile').classList.add('active');
       initProfile();
     }
 
+    function _cardCanvas() {
+      return html2canvas(document.getElementById('profile-card'), {backgroundColor:'#04060d',scale:2,useCORS:true,logging:false});
+    }
+
     function captureProfileCard() {
-      html2canvas(document.getElementById('profile-card'), {
-        backgroundColor: '#04060d', scale: 2, useCORS: true, logging: false,
-      }).then(function(canvas) {
-        var link = document.createElement('a');
-        link.download = 'cc-retrospect-profile.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+      _cardCanvas().then(function(canvas) {
+        var a = document.createElement('a');
+        a.download = 'cc-retrospect-profile.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
       });
     }
 
     function copyProfileCard() {
-      html2canvas(document.getElementById('profile-card'), {
-        backgroundColor: '#04060d', scale: 2, useCORS: true, logging: false,
-      }).then(function(canvas) {
+      _cardCanvas().then(function(canvas) {
         canvas.toBlob(function(blob) {
           navigator.clipboard.write([new ClipboardItem({'image/png': blob})]).then(function() {
-            var btns = document.querySelectorAll('#tab-profile .btn-refresh');
-            if (btns[1]) { btns[1].textContent = '\u2713 Copied!'; setTimeout(function() { btns[1].textContent = '\ud83d\udccb Copy to Clipboard'; }, 2000); }
+            var btn = document.querySelector('#tab-profile .btn-refresh:nth-child(3)');
+            if (btn) { btn.textContent = '\u2713 Copied!'; setTimeout(function(){btn.textContent='\uD83D\uDCCB Copy';},2000); }
           });
         });
       });
     }
 
+    function downloadProfileGif() {
+      var btn = document.querySelector('#tab-profile .btn-refresh:nth-child(2)');
+      if (!window.GIF) { alert('GIF encoder not loaded — use 📸 Save PNG instead'); return; }
+      if (btn) { btn.textContent = '\u23F3 Recording\u2026'; btn.disabled = true; }
+      var card = document.getElementById('profile-card');
+      var w = card.offsetWidth * 2, h = card.offsetHeight * 2;
+      var gif = new GIF({ workers: 2, quality: 6, workerScript: '/gif.worker.js', width: w, height: h });
+      var steps = [
+        {opacity: '0.05', transform: 'scale(0.97)', delay: 0},
+        {opacity: '0.3',  transform: 'scale(0.98)', delay: 80},
+        {opacity: '0.6',  transform: 'scale(0.99)', delay: 80},
+        {opacity: '0.85', transform: 'scale(0.995)',delay: 80},
+        {opacity: '1',    transform: 'scale(1)',    delay: 80},
+        {opacity: '1',    transform: 'scale(1)',    delay: 80},
+        {opacity: '1',    transform: 'scale(1)',    delay: 2000},
+      ];
+      var idx = 0;
+      card.style.transition = 'none';
+      function captureStep() {
+        if (idx >= steps.length) {
+          card.style.opacity = '';
+          card.style.transform = '';
+          gif.render();
+          return;
+        }
+        var s = steps[idx++];
+        card.style.opacity = s.opacity;
+        card.style.transform = s.transform;
+        html2canvas(card, {backgroundColor: '#04060d', scale: 2, useCORS: true, logging: false,
+          windowWidth: document.documentElement.scrollWidth,
+          windowHeight: document.documentElement.scrollHeight,
+        }).then(function(canvas) {
+          gif.addFrame(canvas.getContext('2d'), {copy: true, delay: s.delay || 80});
+          setTimeout(captureStep, 30);
+        });
+      }
+      gif.on('finished', function(blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'cc-retrospect-profile.gif';
+        a.click();
+        if (btn) { btn.textContent = '\uD83C\uDF9E Save GIF'; btn.disabled = false; }
+      });
+      gif.on('error', function(e) {
+        console.error('GIF error', e);
+        if (btn) { btn.textContent = '\uD83C\uDF9E Save GIF'; btn.disabled = false; }
+        card.style.opacity = ''; card.style.transform = '';
+      });
+      setTimeout(captureStep, 200);
+    }
 
-    let _focusedSessIdx = -1;
+
+    /* ── AI INSIGHTS ────────────────────────── */
+    function loadInsights() {
+      fetch('/api/insights').then(r => r.json()).then(function(d) {
+        var wrap = document.getElementById('ai-insights-wrap');
+        var el = document.getElementById('ai-insights-content');
+        var age = document.getElementById('ai-insights-age');
+        var btn = document.getElementById('ai-insights-btn');
+        if (!wrap) return;
+        if (d.status === 'empty') {
+          wrap.style.display = 'block';
+          el.textContent = 'No insights yet. Click ✨ Refresh to generate (uses Claude, cached 1 week).';
+          age.textContent = '';
+          return;
+        }
+        wrap.style.display = 'block';
+        el.textContent = d.content || '';
+        if (d.age_days !== null) {
+          age.textContent = d.status === 'stale' ? '(stale — ' + d.age_days + 'd old)' : '(' + d.age_days + 'd ago)';
+        }
+        if (d.generating) {
+          btn.textContent = '⏳ Generating…';
+          btn.disabled = true;
+          setTimeout(loadInsights, 5000);
+        }
+      }).catch(function() {});
+    }
+    function generateInsights() {
+      var btn = document.getElementById('ai-insights-btn');
+      if (btn) { btn.textContent = '⏳ Generating…'; btn.disabled = true; }
+      fetch('/api/insights/generate', {method: 'POST'}).then(r => r.json()).then(function(d) {
+        if (d.ok) setTimeout(loadInsights, 8000);
+        else if (btn) { btn.textContent = '✨ Refresh'; btn.disabled = false; }
+      });
+    }
+    setTimeout(loadInsights, 800);
+
+        let _focusedSessIdx = -1;
 
     document.addEventListener('keydown', e => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {

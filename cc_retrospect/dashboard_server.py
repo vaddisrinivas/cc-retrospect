@@ -12,10 +12,17 @@ import json
 import logging
 import os
 import signal
+import subprocess
 import sys
+import threading
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
+
+_INSIGHTS_TTL = 7 * 24 * 3600  # 1 week
+_insights_lock = threading.Lock()
+_insights_generating = False
 
 PORT = int(os.environ.get("CC_RETROSPECT_PORT", "7731"))
 _data_dir: Path = Path.home() / ".cc-retrospect"
@@ -46,6 +53,11 @@ class _Handler(BaseHTTPRequestHandler):
             self._reload_and_respond_sessions()
         elif p == "/api/health":
             self._json({"status": "ok", "port": PORT, "data_dir": str(_data_dir)})
+        elif p == "/gif.worker.js":
+            worker = Path(__file__).parent / "gif.worker.js"
+            self._file(worker, "application/javascript")
+        elif p == "/api/insights":
+            self._get_insights()
         else:
             self.send_error(404)
 
@@ -58,6 +70,8 @@ class _Handler(BaseHTTPRequestHandler):
             self._json({"ok": True})
         elif p == "/api/reload":
             self._reload()
+        elif p == "/api/insights/generate":
+            self._trigger_insights()
         else:
             self.send_error(404)
 
@@ -91,6 +105,34 @@ class _Handler(BaseHTTPRequestHandler):
         except (OSError, ImportError, ValueError) as e:
             self._json({"error": str(e)}, 500)
 
+    def _get_insights(self):
+        cache = _data_dir / "insights_cache.json"
+        if cache.exists():
+            try:
+                data = json.loads(cache.read_text())
+                age = time.time() - data.get("ts", 0)
+                self._json({
+                    "status": "cached" if age < _INSIGHTS_TTL else "stale",
+                    "content": data.get("content", ""),
+                    "age_days": round(age / 86400, 1),
+                    "generating": _insights_generating,
+                })
+                return
+            except (json.JSONDecodeError, OSError, KeyError):
+                pass
+        self._json({"status": "empty", "content": "", "age_days": None, "generating": _insights_generating})
+
+    def _trigger_insights(self):
+        global _insights_generating
+        with _insights_lock:
+            if _insights_generating:
+                self._json({"ok": False, "message": "Already generating"})
+                return
+            _insights_generating = True
+        t = threading.Thread(target=_run_insights_background, daemon=True)
+        t.start()
+        self._json({"ok": True, "message": "Generating insights in background (1-2 min)…"})
+
     def _file(self, path: Path, mime: str):
         if not path.exists():
             self.send_error(404)
@@ -113,6 +155,37 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body)
+
+
+def _run_insights_background() -> None:
+    """Run `claude -p /cc-retrospect` and cache the output. Runs in a daemon thread."""
+    global _insights_generating
+    cache = _data_dir / "insights_cache.json"
+    try:
+        import re
+        result = subprocess.run(
+            ["claude", "-p", "/cc-retrospect"],
+            capture_output=True, text=True, timeout=300,
+            env={**os.environ, "NO_COLOR": "1"},
+        )
+        raw = result.stdout.strip() or result.stderr.strip()
+        # Strip ANSI escape codes
+        ansi = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        content = ansi.sub("", raw).strip()
+        if content:
+            cache.write_text(json.dumps({"content": content, "ts": time.time()}), encoding="utf-8")
+            logger.info("Insights cached (%d chars)", len(content))
+        else:
+            logger.warning("claude -p returned empty output")
+    except subprocess.TimeoutExpired:
+        logger.warning("claude -p timed out after 5 min")
+    except FileNotFoundError:
+        logger.warning("claude CLI not found — insights unavailable")
+    except (OSError, Exception) as e:
+        logger.warning("Insights generation failed: %s", e)
+    finally:
+        with _insights_lock:
+            _insights_generating = False
 
 
 def _mime(name: str) -> str:

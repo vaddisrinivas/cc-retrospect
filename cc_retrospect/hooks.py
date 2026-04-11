@@ -542,6 +542,16 @@ def run_user_prompt(payload: dict, *, config: Config | None = None) -> int:
     if plen > config.thresholds.mega_prompt_chars:
         live.mega_prompt_count = getattr(live, "mega_prompt_count", 0) + 1
 
+    # Compact nudge check (mirrors post_tool_use logic)
+    msg = max(live.tool_count, live.message_count)
+    th = config.thresholds
+    if msg >= th.compact_nudge_first and not live.compact_nudged:
+        hints.append(config.messages.hint_compact_first.format(count=msg))
+        live.compact_nudged = True
+    elif msg >= th.compact_nudge_second and live.compact_nudged and not live.compact_nudged_2:
+        hints.append(config.messages.hint_compact_second.format(count=msg))
+        live.compact_nudged_2 = True
+
     # Rapid-fire detection: 5+ prompts within 30s
     now_ts = datetime.now(timezone.utc).isoformat()
     if live.last_prompt_ts:

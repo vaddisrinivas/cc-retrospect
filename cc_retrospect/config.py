@@ -21,20 +21,20 @@ class ModelPricing(BaseModel):
 
 
 class ThresholdsConfig(BaseModel):
-    long_session_minutes: int = 120
-    long_session_messages: int = 200
+    long_session_minutes: int = 90
+    long_session_messages: int = 150
     mega_prompt_chars: int = 1000
     mega_prompt_very_long_chars: int = 3000
     mega_prompt_newline_density: float = 0.02
-    max_subagents_per_session: int = 10
+    max_subagents_per_session: int = 8
     max_claudemd_bytes: int = 50_000
     tool_chain_threshold: int = 5
-    daily_cost_warning: float = 500.0
-    cost_tip_threshold: float = 100.0
+    daily_cost_warning: float = 400.0
+    cost_tip_threshold: float = 50.0
     frustration_tip_threshold: int = 3
-    compact_nudge_first: int = 150
-    compact_nudge_second: int = 300
-    learn_refresh_interval: int = 50
+    compact_nudge_first: int = 30
+    compact_nudge_second: int = 60
+    learn_refresh_interval: int = 30
     frustration_keywords: list[str] = ["again", "ugh", "still broken", "not working", "wrong", "try again", "that's wrong", "no ", "still not", "wtf", "come on", "seriously", "sigh", "nope"]
     waste_webfetch_domains: list[str] = ["github.com", "api.github.com"]
 

@@ -251,6 +251,28 @@ def analyze_user_messages(config: Config) -> UserProfile:
     )
 
 
+def _extract_generated_scripts_section(style_path) -> str:
+    """Return the '## Generated Scripts' section from an existing STYLE.md, or empty string."""
+    try:
+        from pathlib import Path
+        p = Path(style_path)
+        if not p.exists():
+            return ""
+        lines = p.read_text(encoding="utf-8").splitlines()
+        in_section, section_lines = False, []
+        for line in lines:
+            if line.strip() == "## Generated Scripts":
+                in_section = True
+                section_lines.append(line)
+            elif in_section:
+                if line.startswith("## "):
+                    break
+                section_lines.append(line)
+        return "\n".join(section_lines).rstrip()
+    except OSError:
+        return ""
+
+
 def generate_style(profile: UserProfile, config=None) -> str:
     """Generate a STYLE.md based on detected patterns."""
     if config is None:
@@ -419,6 +441,11 @@ def run_learn(payload: dict = {}, *, config: Config | None = None) -> int:
     profile = analyze_user_messages(config)
 
     style_content = generate_style(profile, config)
+    # Preserve any ## Generated Scripts entries from active STYLE.md
+    active_style = config.claude_dir / "STYLE.md"
+    scripts_section = _extract_generated_scripts_section(active_style)
+    if scripts_section:
+        style_content = style_content.rstrip() + "\n\n" + scripts_section + "\n"
     learnings_content = generate_learnings(profile)
 
     # Write to data dir

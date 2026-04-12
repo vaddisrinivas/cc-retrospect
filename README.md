@@ -147,7 +147,7 @@ Hooks fire on every session with zero setup:
 | **Session end** | Session closes | Cache cost/tokens/tools, track daily spend, log waste flags, update trends, auto-sync STYLE.md |
 | **Session start** | Session opens | Show last-session recap, daily digest, tips if thresholds exceeded |
 | **Pre-tool** | Before WebFetch/Agent/Bash | Warn on GitHub WebFetch (use `gh`), Agent for simple searches (use Grep), long Bash chains |
-| **Post-tool** | After any tool | Nudge `/compact` at 150+ and 300+ tool calls, warn on subagent overuse |
+| **Post-tool** | After any tool | Nudge `/compact` at 150+ and 300+ tool calls; auto-compact at 300+ if `HINTS__AUTO_COMPACT=true`; suggest cheaper model if `HINTS__MODEL_NUDGE=true` |
 | **User prompt** | Before prompt submit | Detect mega-pastes (>1000 chars) and very long prompts |
 | **Compaction** | Before/after compact | Log compaction events with token counts |
 
@@ -210,6 +210,10 @@ THRESHOLDS__LONG_SESSION_MINUTES=120
 HINTS__SESSION_START=true
 HINTS__PRE_TOOL=true
 HINTS__POST_TOOL=true
+HINTS__AUTO_COMPACT=true        # auto-fire /compact at second nudge threshold
+HINTS__MODEL_NUDGE=true         # suggest cheaper model mid-session
+HINTS__DIGEST_ON_START=false    # show yesterday's digest on every session open
+HINTS__WASTE_TO_LATER=false     # write waste flags to LATER.md (requires cc-later)
 
 # Exclude projects/entrypoints from analysis
 FILTER__EXCLUDE_ENTRYPOINTS=["cc-retrospect","cc-later"]

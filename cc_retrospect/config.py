@@ -48,7 +48,10 @@ class HintsConfig(BaseModel):
     daily_digest: bool = True
     waste_on_stop: bool = True
     auto_learn: bool = True
-    waste_to_later: bool = False
+    waste_to_later: bool = False  # requires cc-later; writes waste flags to ~/.claude/LATER.md
+    auto_compact: bool = True  # auto-fire /compact when session hits second nudge threshold
+    model_nudge: bool = True  # suggest cheaper model mid-session when usage looks simple
+    digest_on_start: bool = False  # show yesterday's digest on session start
 
 
 class MessagesConfig(BaseModel):

@@ -297,11 +297,15 @@ def run_stop_hook(payload: dict, *, config: Config | None = None) -> int:
             profile = analyze_user_messages(config)
             style_path = config.data_dir / "STYLE.md"
             learnings_path = config.data_dir / "LEARNINGS.md"
+            from cc_retrospect.learn import _extract_generated_scripts_section
+            active_style = config.claude_dir / "STYLE.md"
+            scripts_section = _extract_generated_scripts_section(active_style)
             style_content = generate_style(profile, config)
+            if scripts_section:
+                style_content = style_content.rstrip() + "\n\n" + scripts_section + "\n"
             style_path.write_text(style_content, encoding="utf-8")
             learnings_path.write_text(generate_learnings(profile), encoding="utf-8")
             # Auto-sync STYLE.md to ~/.claude/STYLE.md so Claude reads it
-            active_style = config.claude_dir / "STYLE.md"
             try:
                 active_style.write_text(style_content, encoding="utf-8")
                 logger.info("Auto-synced STYLE.md to %s", active_style)
@@ -330,6 +334,14 @@ def run_stop_hook(payload: dict, *, config: Config | None = None) -> int:
             msg = tier.message or getattr(config.messages, f"budget_{tier_name}", config.messages.budget_alert)
             print(f"{config.messages.prefix} {msg.format(cost=_fmt_cost(today_cost), threshold=_fmt_cost(tier.threshold))}", file=sys.stderr)
             alerted_today.add(tier_name)
+            # Log alert to budget_alerts.jsonl for history
+            try:
+                alert_entry = json.dumps({"ts": datetime.now(timezone.utc).isoformat(), "tier": tier_name, "cost": today_cost, "threshold": tier.threshold, "project": summary.project}) + "\n"
+                alerts_path = config.data_dir / "budget_alerts.jsonl"
+                with alerts_path.open("a", encoding="utf-8") as f:
+                    f.write(alert_entry)
+            except OSError as e:
+                logger.debug("Failed to log budget alert: %s", e)
             _run_custom_scripts(config, "on_budget_alert", {"CC_DAILY_COST": f"{today_cost:.2f}", "CC_BUDGET_TIER": tier_name, "CC_THRESHOLD": f"{tier.threshold:.2f}", "CC_PROJECT": summary.project})
     state["budget_alerts_today"] = list(alerted_today)
     # Update weekly trends
@@ -462,6 +474,13 @@ def run_session_start_hook(payload: dict, *, config: Config | None = None) -> in
             logger.debug("Daily digest failed: %s", e)
     if lines and config.hints.session_start:
         print(f"{m.prefix} " + " ".join(lines))
+    # Opt-in: show full digest on every session start (not just new-day summary)
+    if config.hints.digest_on_start:
+        try:
+            from cc_retrospect.commands import run_digest
+            run_digest({}, config=config)
+        except (ImportError, OSError) as e:
+            logger.debug("digest_on_start failed: %s", e)
     _init_live_state(config)
     _run_custom_scripts(config, "on_session_start", {"CC_CWD": cwd})
     return 0
@@ -538,7 +557,7 @@ def run_post_tool_use(payload: dict, *, config: Config | None = None) -> int:
         hints.append(config.messages.hint_compact_second.format(count=msg))
         live.compact_nudged_2 = True
     # Auto-compact: fire at second threshold if enabled
-    if msg >= th.compact_nudge_second and live.compact_nudged_2 and not getattr(live, 'auto_compacted', False):
+    if config.hints.auto_compact and msg >= th.compact_nudge_second and live.compact_nudged_2 and not getattr(live, 'auto_compacted', False):
         try:
             from cc_retrospect.session_control import send_compact
             session_id = payload.get("session_id", "")
@@ -550,7 +569,7 @@ def run_post_tool_use(payload: dict, *, config: Config | None = None) -> int:
         hints.append(config.messages.hint_subagent_limit.format(count=live.subagent_count))
         live.subagent_warned = True
     # Model nudge for simple-tool-only sessions
-    if not getattr(live, 'model_nudge_shown', False) and live.tool_count >= 10:
+    if config.hints.model_nudge and not getattr(live, 'model_nudge_shown', False) and live.tool_count >= 10:
         try:
             from cc_retrospect.session_control import model_nudge
             nudge = model_nudge({

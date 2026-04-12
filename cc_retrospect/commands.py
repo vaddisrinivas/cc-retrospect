@@ -65,6 +65,7 @@ def run_compare(payload: dict | None = None, *, config: Config | None = None) ->
 
 
 def run_report(payload: dict | None = None, *, config: Config | None = None) -> int:
+    """Full analysis report — runs all analyzers, saves markdown to ~/.cc-retrospect/reports/ and prints. Use for archiving or sharing. See also: run_all (JSON output only)."""
     payload = payload or {}
     config = config or load_config()
     sessions = load_all_sessions(config)
@@ -347,7 +348,7 @@ def run_uninstall(payload: dict | None = None, *, config: Config | None = None) 
 
 
 def run_all(payload: dict | None = None, *, config: Config | None = None) -> int:
-    """Run all analyzers and return combined JSON output."""
+    """Run all analyzers, output combined JSON to stdout. Use for scripting/piping. Does not save a file. See also: run_report (saves markdown, prints to terminal)."""
     payload = payload or {}
     config = config or load_config()
     sessions = load_all_sessions(config)
@@ -429,4 +430,63 @@ def run_chains(payload: dict | None = None, *, config: Config | None = None) -> 
 
         print("\n".join(lines))
 
+    return 0
+
+
+def run_toolcalls(payload: dict | None = None, *, config: Config | None = None) -> int:
+    """Browse tool call history across sessions. Filter by tool name, errors, project, days."""
+    payload = payload or {}
+    config = config or load_config()
+    sessions = load_all_sessions(config)
+    sessions = _filter_sessions(sessions, project=payload.get("project"), days=payload.get("days", 7), config=config)
+
+    tool_filter = payload.get("tool")
+    errors_only = payload.get("errors_only", False)
+
+    rows = []
+    for s in sessions:
+        if not hasattr(s, "tool_calls") or not s.tool_calls:
+            continue
+        for tc in s.tool_calls:
+            if tool_filter and tc.name.lower() != tool_filter.lower():
+                continue
+            if errors_only and not tc.is_error:
+                continue
+            rows.append({
+                "session_id": s.session_id[:8],
+                "project": s.project,
+                "date": s.start_ts[:10] if s.start_ts else "",
+                "tool": tc.name,
+                "input": tc.input_summary,
+                "output": tc.output_snippet,
+                "error": tc.is_error,
+                "ts": tc.ts,
+            })
+
+    # Sort newest first
+    rows.sort(key=lambda r: r["ts"] or "", reverse=True)
+
+    if payload.get("json"):
+        print(json.dumps(rows, default=str, indent=2))
+        return 0
+
+    if not rows:
+        print("No tool calls found for the given filters.")
+        return 0
+
+    lines = [f"## Tool Call History ({len(rows)} calls, last {payload.get('days', 7)} days)", ""]
+    if tool_filter:
+        lines.append(f"Filter: tool={tool_filter}")
+    if errors_only:
+        lines.append("Filter: errors only")
+    lines.append("")
+    lines.append("| Date | Project | Tool | Input | Error |")
+    lines.append("|------|---------|------|-------|-------|")
+    for r in rows[:100]:
+        err = "YES" if r["error"] else ""
+        inp = (r["input"] or "")[:60].replace("|", "/")
+        lines.append(f"| {r['date']} | {r['project']} | {r['tool']} | {inp} | {err} |")
+    if len(rows) > 100:
+        lines.append(f"\n_(showing 100 of {len(rows)})_")
+    print("\n".join(lines))
     return 0

@@ -18,7 +18,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 _INSIGHTS_TTL = 7 * 24 * 3600  # 1 week
 _insights_lock = threading.Lock()
@@ -60,6 +60,14 @@ class _Handler(BaseHTTPRequestHandler):
             self._get_insights()
         elif p == "/api/config/structured":
             self._structured_config()
+        elif p == "/api/scripts":
+            self._list_scripts()
+        elif p == "/api/style":
+            self._get_style()
+        elif p == "/api/chains":
+            self._get_chains()
+        elif p == "/api/toolcalls":
+            self._get_toolcalls()
         else:
             self.send_error(404)
 
@@ -78,6 +86,12 @@ class _Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
             self._update_structured_config(body)
+        elif p == "/api/style/sync":
+            self._sync_style()
+        elif p == "/api/style/generate":
+            self._generate_style()
+        elif p == "/api/magic-create":
+            self._magic_create()
         else:
             self.send_error(404)
 
@@ -197,6 +211,352 @@ class _Handler(BaseHTTPRequestHandler):
 
         config_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         self._json({"ok": True})
+
+    def _get_style(self):
+        active = Path.home() / ".claude" / "STYLE.md"
+        generated = _data_dir / "STYLE.md"
+        data = {
+            "active": active.read_text(encoding="utf-8") if active.exists() else "",
+            "generated": generated.read_text(encoding="utf-8") if generated.exists() else "",
+            "active_path": str(active),
+            "generated_path": str(generated),
+            "in_sync": active.exists() and generated.exists() and active.read_text() == generated.read_text(),
+        }
+        self._json(data)
+
+    def _get_chains(self):
+        try:
+            from cc_retrospect.config import load_config
+            from cc_retrospect.cache import load_all_sessions
+            cfg = load_config()
+            sessions = load_all_sessions(cfg)
+            chains = []
+            for s in sessions[-100:]:
+                session_chains = []
+                for tool, length in (getattr(s, "tool_chains", None) or []):
+                    session_chains.append({"tool": tool, "length": length})
+                if session_chains:
+                    chains.append({
+                        "session_id": s.session_id,
+                        "project": s.project,
+                        "date": (s.start_ts or "")[:10],
+                        "cost": round(s.total_cost, 2),
+                        "chains": session_chains,
+                    })
+            self._json({"chains": chains})
+        except (ImportError, OSError, ValueError) as e:
+            self._json({"error": str(e)}, 500)
+
+    def _get_toolcalls(self):
+        try:
+            from cc_retrospect.config import load_config
+            from cc_retrospect.cache import load_all_sessions
+            qs = parse_qs(urlparse(self.path).query)
+            limit = min(int(qs.get("limit", ["100"])[0]), 200)
+            offset = int(qs.get("offset", ["0"])[0])
+            tool_filter = qs.get("tool", [None])[0]
+            error_only = qs.get("errors", ["0"])[0] == "1"
+
+            cfg = load_config()
+            sessions = load_all_sessions(cfg)
+            # Only scan recent sessions (last 200) for performance — 53k+ calls is too much
+            recent = sorted(
+                [s for s in sessions if getattr(s, "tool_calls", None)],
+                key=lambda s: s.start_ts or "", reverse=True,
+            )[:200]
+            tool_names_set = set()
+            all_calls = []
+            for s in recent:
+                for tc in (getattr(s, "tool_calls", None) or []):
+                    tool_names_set.add(tc.name)
+                    if tool_filter and tc.name != tool_filter:
+                        continue
+                    if error_only and not tc.is_error:
+                        continue
+                    all_calls.append({
+                        "name": tc.name,
+                        "input_summary": (tc.input_summary or "")[:200],
+                        "output_snippet": (tc.output_snippet or "")[:100],
+                        "is_error": tc.is_error,
+                        "ts": tc.ts,
+                        "session_id": s.session_id,
+                        "project": s.project,
+                    })
+            all_calls.sort(key=lambda x: x.get("ts", ""), reverse=True)
+            total = len(all_calls)
+            page = all_calls[offset:offset + limit]
+            self._json({"calls": page, "total": total, "offset": offset, "limit": limit, "tool_names": sorted(tool_names_set)})
+        except (ImportError, OSError, ValueError, TypeError) as e:
+            self._json({"error": str(e)}, 500)
+
+    def _sync_style(self):
+        generated = _data_dir / "STYLE.md"
+        active = Path.home() / ".claude" / "STYLE.md"
+        if generated.exists():
+            active.write_text(generated.read_text(encoding="utf-8"), encoding="utf-8")
+            self._json({"ok": True, "message": "STYLE.md synced"})
+        else:
+            self._json({"ok": False, "message": "No generated STYLE.md found. Run /cc-retrospect:learn first."}, 400)
+
+    def _generate_style(self):
+        try:
+            from cc_retrospect.learn import analyze_user_messages, generate_style
+            from cc_retrospect.config import load_config
+            cfg = load_config()
+            profile = analyze_user_messages(cfg)
+            content = generate_style(profile, cfg)
+            (_data_dir / "STYLE.md").write_text(content, encoding="utf-8")
+            self._json({"ok": True, "content": content})
+        except (ImportError, OSError, ValueError) as e:
+            self._json({"ok": False, "error": str(e)}, 500)
+
+    def _list_scripts(self):
+        """List saved generated scripts from ~/.claude/plugins/generated_scripts/."""
+        scripts_dir = Path.home() / ".claude" / "plugins" / "generated_scripts"
+        if not scripts_dir.exists():
+            self._json({"scripts": []})
+            return
+        out = []
+        for f in sorted(scripts_dir.glob("*.sh"), key=lambda p: p.stat().st_mtime, reverse=True):
+            # Extract description/when_to_use from script header comments
+            description, when_to_use = "", ""
+            try:
+                for line in f.read_text(encoding="utf-8").splitlines()[:20]:
+                    if line.startswith("# Description:"):
+                        description = line[14:].strip()
+                    elif line.startswith("# When to use:"):
+                        when_to_use = line[14:].strip()
+                    elif line.startswith("# Use when:"):
+                        when_to_use = line[11:].strip()
+            except OSError:
+                pass
+            out.append({
+                "name": f.name,
+                "path": str(f),
+                "size": f.stat().st_size,
+                "modified": time.strftime("%Y-%m-%d", time.localtime(f.stat().st_mtime)),
+                "description": description,
+                "when_to_use": when_to_use,
+            })
+        self._json({"scripts": out})
+
+    def _magic_create(self):
+        """Use Claude to generate a self-contained script, save it, update STYLE.md."""
+        import re
+        from cc_retrospect.config import load_config
+        cfg = load_config()
+        mc = cfg.magic_create
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+            calls = body.get("calls", [])
+            user_prompt = body.get("prompt", "").strip()
+            scope = body.get("scope", "selected")
+            projects = body.get("projects", [])
+            script_name = body.get("script_name", "").strip()
+
+            if not calls:
+                self._json({"ok": False, "error": "No tool calls provided"}, 400)
+                return
+
+            # Parse tool call inputs for clean display
+            def _parse_call(c):
+                name = c.get("name", "")
+                raw = c.get("input_summary", "") or ""
+                try:
+                    parsed = json.loads(raw)
+                    if name == "Bash":
+                        return parsed.get("command", raw)
+                    elif name in ("Edit", "Read", "Write"):
+                        return parsed.get("file_path", raw)
+                    elif name == "Glob":
+                        return parsed.get("pattern", raw)
+                    elif name == "Grep":
+                        return f"grep '{parsed.get('pattern','')}' in {parsed.get('path','.')}"
+                    elif name == "WebFetch":
+                        return parsed.get("url", raw)
+                    else:
+                        return raw[:120]
+                except (json.JSONDecodeError, AttributeError):
+                    return raw[:120]
+
+            call_lines = []
+            for i, c in enumerate(calls[:mc.max_calls], 1):
+                summary = _parse_call(c)
+                output = (c.get("output_snippet") or "")[:80]
+                err = " [ERROR]" if c.get("is_error") else ""
+                proj_tag = f" ({c.get('project','').split('-')[-1]})" if scope == "cross" else ""
+                call_lines.append(
+                    f"{i:2}. [{c.get('name','')}]{err}{proj_tag} {summary}"
+                    + (f"\n    → {output}" if output else "")
+                )
+
+            calls_block = "\n".join(call_lines)
+            goal = user_prompt or "Create a reusable, self-contained script that automates this workflow"
+
+            # Scope-specific instructions
+            if scope == "cross":
+                proj_context = f"These calls span multiple projects: {', '.join(projects[:6]) or 'various'}."
+                portability = (
+                    "- Make the script fully portable: no hardcoded project paths, use $PWD/$1 for targets\n"
+                    "- Add a --project or positional arg so it works across repos\n"
+                    "- Use relative paths or CLI args for anything project-specific"
+                )
+            elif scope == "project":
+                proj_context = f"These calls are from project(s): {', '.join(projects[:3]) or 'one project'}."
+                portability = (
+                    "- Replace hardcoded absolute paths with $HOME, $PROJECT_ROOT, or script-relative vars\n"
+                    "- Add a PROJECT_ROOT variable at the top defaulting to the script's location"
+                )
+            else:
+                proj_context = ""
+                portability = "- Replace hardcoded paths with $HOME or variables where sensible"
+
+            prompt = f"""You are a senior DevOps engineer. A developer captured these tool calls from their Claude Code session history and wants them automated as a reusable script.
+
+{proj_context}
+
+## Tool Call History ({len(calls)} calls, scope: {scope})
+```
+{calls_block}
+```
+
+## Goal
+{goal}
+
+## Requirements for the script
+- Single self-contained bash script (Python only if bash is clearly wrong)
+- `set -euo pipefail` + `trap` for cleanup if needed
+- Usage/help block if script takes arguments
+- Inline comments on every non-obvious step
+{portability}
+- Check required dependencies (command -v) at startup
+- Make it idempotent where possible
+- End with a clear success echo
+
+## Output format
+Respond with ONLY a JSON object — no markdown, no explanation:
+{{
+  "description": "<one sentence: what the script does>",
+  "when_to_use": "<one sentence: when/why someone would run this>",
+  "script": "<full raw bash script as a string, \\n for newlines>"
+}}"""
+
+            cmd = ["claude", "-p", prompt, "--output-format", "json"]
+            if mc.model:
+                cmd += ["--model", mc.model]
+            result = subprocess.run(
+                cmd,
+                capture_output=True, text=True, timeout=mc.timeout_seconds,
+                env={**os.environ, "NO_COLOR": "1"},
+            )
+            if result.returncode != 0:
+                self._json({"ok": False, "error": result.stderr.strip() or "claude failed"}, 500)
+                return
+
+            outer = json.loads(result.stdout)
+            raw_result = outer.get("result", "").strip()
+
+            # Parse structured JSON from Claude's result field
+            try:
+                # Strip markdown fences if Claude wrapped it anyway
+                clean = re.sub(r"^```(?:json)?\n?", "", raw_result)
+                clean = re.sub(r"\n?```$", "", clean).strip()
+                payload = json.loads(clean)
+                description = payload.get("description", "").strip()
+                when_to_use = payload.get("when_to_use", "").strip()
+                script = payload.get("script", "").strip()
+            except (json.JSONDecodeError, KeyError):
+                # Fallback: treat the whole result as raw script, parse comment headers
+                ansi = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+                script = ansi.sub("", raw_result).strip()
+                script = re.sub(r"^```(?:bash|sh|python)?\n", "", script)
+                script = re.sub(r"\n```$", "", script).strip()
+                description, when_to_use = "", ""
+                for line in script.splitlines()[:15]:
+                    if line.startswith("# Description:"):
+                        description = line[14:].strip()
+                    elif line.startswith("# When to use:") or line.startswith("# Use when:"):
+                        when_to_use = line.split(":", 1)[1].strip() if ":" in line else ""
+
+            if not script:
+                self._json({"ok": False, "error": "Claude returned empty script"}, 500)
+                return
+
+            # Prepend description/when_to_use as header comments if present
+            if description or when_to_use:
+                header_lines = []
+                if description:
+                    header_lines.append(f"# Description: {description}")
+                if when_to_use:
+                    header_lines.append(f"# When to use: {when_to_use}")
+                # Insert after shebang line if present
+                lines = script.splitlines()
+                if lines and lines[0].startswith("#!"):
+                    script = lines[0] + "\n" + "\n".join(header_lines) + "\n" + "\n".join(lines[1:])
+                else:
+                    script = "\n".join(header_lines) + "\n" + script
+
+            # Save to configured scripts directory
+            scripts_dir = mc.save_dir
+            scripts_dir.mkdir(parents=True, exist_ok=True)
+
+            # Derive filename from script_name or goal
+            if not script_name:
+                slug = re.sub(r"[^a-z0-9]+", "-", goal.lower())[:40].strip("-")
+                script_name = slug + ".sh"
+            elif not script_name.endswith((".sh", ".py")):
+                script_name += ".sh"
+
+            # Avoid collisions
+            save_path = scripts_dir / script_name
+            stem = save_path.stem
+            idx = 1
+            while save_path.exists():
+                save_path = scripts_dir / f"{stem}-{idx}{save_path.suffix}"
+                idx += 1
+
+            save_path.write_text(script, encoding="utf-8")
+            save_path.chmod(0o755)
+
+            # Append one line to STYLE.md
+            style_line = ""
+            if description or when_to_use:
+                parts = []
+                if description:
+                    parts.append(description)
+                if when_to_use:
+                    parts.append(f"Use when: {when_to_use}")
+                style_line = f"- `{save_path.name}` — {'. '.join(parts)}"
+
+                active_style = Path.home() / ".claude" / "STYLE.md"
+                try:
+                    content = active_style.read_text(encoding="utf-8") if active_style.exists() else ""
+                    # Add Generated Scripts section if not present
+                    if "## Generated Scripts" not in content:
+                        content = content.rstrip() + "\n\n## Generated Scripts\n"
+                    content = content.rstrip() + "\n" + style_line + "\n"
+                    active_style.write_text(content, encoding="utf-8")
+                    # Also sync back to cc-retrospect copy
+                    (_data_dir / "STYLE.md").write_text(content, encoding="utf-8")
+                except OSError:
+                    pass
+
+            self._json({
+                "ok": True,
+                "script": script,
+                "saved_path": str(save_path),
+                "script_name": save_path.name,
+                "style_line": style_line,
+                "description": description,
+                "when_to_use": when_to_use,
+            })
+        except subprocess.TimeoutExpired:
+            self._json({"ok": False, "error": f"Claude timed out ({mc.timeout_seconds}s). Try fewer calls or increase MAGIC_CREATE__TIMEOUT_SECONDS."}, 504)
+        except FileNotFoundError:
+            self._json({"ok": False, "error": "claude CLI not found — is Claude Code installed?"}, 503)
+        except (OSError, json.JSONDecodeError, subprocess.SubprocessError) as e:
+            self._json({"ok": False, "error": str(e)}, 500)
 
     def _file(self, path: Path, mime: str):
         if not path.exists():

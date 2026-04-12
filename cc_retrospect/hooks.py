@@ -297,8 +297,16 @@ def run_stop_hook(payload: dict, *, config: Config | None = None) -> int:
             profile = analyze_user_messages(config)
             style_path = config.data_dir / "STYLE.md"
             learnings_path = config.data_dir / "LEARNINGS.md"
-            style_path.write_text(generate_style(profile, config), encoding="utf-8")
+            style_content = generate_style(profile, config)
+            style_path.write_text(style_content, encoding="utf-8")
             learnings_path.write_text(generate_learnings(profile), encoding="utf-8")
+            # Auto-sync STYLE.md to ~/.claude/STYLE.md so Claude reads it
+            active_style = config.claude_dir / "STYLE.md"
+            try:
+                active_style.write_text(style_content, encoding="utf-8")
+                logger.info("Auto-synced STYLE.md to %s", active_style)
+            except OSError as e:
+                logger.debug("Failed to sync STYLE.md to claude dir: %s", e)
             state["session_count_since_learn"] = 0
             state["last_learn_refresh"] = datetime.now(timezone.utc).isoformat()
             logger.info("Auto-refreshed STYLE.md and LEARNINGS.md after %d sessions", session_count)

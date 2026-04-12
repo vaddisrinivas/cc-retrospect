@@ -8,6 +8,8 @@
 
 Claude Code doesn't show what you're spending. No cost dashboard, no warning at 300 tool calls, no signal you used Opus for a task Sonnet could handle. cc-retrospect fixes that.
 
+> **v3.0.0-rc** — Tool call history browser, Magic Create script generator (Claude-powered, structured JSON output), STYLE.md live sync, chain pattern analysis.
+
 ## Install
 
 ### Plugin (recommended)
@@ -68,6 +70,9 @@ The server starts once and persists across sessions. Refresh in-place with the �
 - Weekly trend table
 - Saved report snapshots with open/load buttons
 - Inline config editor for `~/.cc-retrospect/config.env`
+- **Tool call history** — browse, filter, and search every tool call across your sessions
+- **Chain patterns** — see which tools you chain most and how deep those chains run
+- **STYLE.md sync** — view active vs generated style, trigger sync or regeneration
 
 **Keyboard shortcuts:**
 
@@ -95,8 +100,39 @@ The server starts once and persists across sessions. Refresh in-place with the �
 | `/api/health` | GET | Server health check |
 | `/api/reports` | GET | List saved snapshots |
 | `/reports/<name>` | GET | Serve a snapshot |
+| `/api/toolcalls` | GET | Tool call history (filterable by tool name, error-only, limit) |
+| `/api/chains` | GET | Aggregated tool chain patterns |
+| `/api/style` | GET | Active STYLE.md content |
+| `/api/style/sync` | POST | Sync generated STYLE.md → `~/.claude/STYLE.md` |
+| `/api/style/generate` | POST | Regenerate STYLE.md from session history |
+| `/api/magic-create` | POST | Generate a reusable script from selected tool calls |
+| `/api/scripts` | GET | List saved generated scripts |
 
 Port defaults to `7731`. Override with `CC_RETROSPECT_PORT=XXXX`.
+
+---
+
+## Magic Create
+
+Select tool calls from your session history and turn them into a reusable, fully-commented bash script — powered by Claude.
+
+**Scopes:**
+- **Selected calls only** — script from exactly the rows you checked
+- **This project** — script scoped to one project (uses `$PROJECT_ROOT`)
+- **Cross-project** — portable script with `$1`/args instead of hardcoded paths
+
+Generated scripts are saved to `~/.claude/plugins/generated_scripts/` (configurable) and a one-line entry is appended to `~/.claude/STYLE.md` under `## Generated Scripts` so Claude knows when to suggest them.
+
+Claude returns a **structured JSON response** (`{"description", "when_to_use", "script"}`) — no fragile comment parsing, clean extraction every time.
+
+**Configure in `~/.cc-retrospect/config.env`:**
+
+```env
+MAGIC_CREATE__SAVE_DIR=~/.claude/plugins/generated_scripts
+MAGIC_CREATE__MODEL=claude-sonnet-4-6   # default: claude -p default
+MAGIC_CREATE__TIMEOUT_SECONDS=120
+MAGIC_CREATE__MAX_CALLS=60
+```
 
 ---
 
@@ -108,7 +144,7 @@ Hooks fire on every session with zero setup:
 
 | Hook | Trigger | What it does |
 |------|---------|-------------|
-| **Session end** | Session closes | Cache cost/tokens/tools, track daily spend, log waste flags, update trends |
+| **Session end** | Session closes | Cache cost/tokens/tools, track daily spend, log waste flags, update trends, auto-sync STYLE.md |
 | **Session start** | Session opens | Show last-session recap, daily digest, tips if thresholds exceeded |
 | **Pre-tool** | Before WebFetch/Agent/Bash | Warn on GitHub WebFetch (use `gh`), Agent for simple searches (use Grep), long Bash chains |
 | **Post-tool** | After any tool | Nudge `/compact` at 150+ and 300+ tool calls, warn on subagent overuse |
@@ -180,6 +216,12 @@ FILTER__EXCLUDE_ENTRYPOINTS=["cc-retrospect","cc-later"]
 
 # Dashboard server port (default: 7731)
 # CC_RETROSPECT_PORT=7731
+
+# Magic Create script generator
+MAGIC_CREATE__SAVE_DIR=~/.claude/plugins/generated_scripts
+MAGIC_CREATE__MODEL=claude-sonnet-4-6
+MAGIC_CREATE__TIMEOUT_SECONDS=120
+MAGIC_CREATE__MAX_CALLS=60
 ```
 
 Full config reference: [docs/configuration.md](docs/configuration.md)
@@ -191,7 +233,7 @@ Full config reference: [docs/configuration.md](docs/configuration.md)
 ```
 cc_retrospect/
   config.py               Config models (Pydantic + pydantic-settings)
-  models.py               Data models (SessionSummary, AnalysisResult, etc.)
+  models.py               Data models (SessionSummary, AnalysisResult, ToolCall, etc.)
   parsers.py              JSONL parsing, session analysis, cost computation
   cache.py                Session cache, atomic writes, live state
   analyzers.py            9 analyzers (Cost, Waste, Health, Habits, Tips, Compare, Savings, Model, Trend)
@@ -208,16 +250,17 @@ cc_retrospect/
 Data payload sent to the dashboard (`D`):
 
 ```
-D.state            Today's cost, per-project breakdown, budget alert state
-D.sessions         All sessions in window (cost, tokens, tools, waste flags, grades)
-D.trends           Weekly snapshots
-D.compactions      Compaction events
-D.budget_tiers     Warning / critical / severe thresholds
-D.tool_usage       Aggregate tool counts across all sessions
-D.hourly_activity  Sessions per hour of day (24 buckets)
-D.cost_by_day      Daily cost totals
-D.model_recommendation  Haiku vs Sonnet advisory
-D.reports          Saved snapshot list
+D.state                Today's cost, per-project breakdown, budget alert state
+D.sessions             All sessions in window (cost, tokens, tools, waste flags, grades)
+D.trends               Weekly snapshots
+D.compactions          Compaction events
+D.budget_tiers         Warning / critical / severe thresholds
+D.tool_usage           Aggregate tool counts across all sessions
+D.hourly_activity      Sessions per hour of day (24 buckets)
+D.cost_by_day          Daily cost totals
+D.model_recommendation Haiku vs Sonnet advisory
+D.reports              Saved snapshot list
+D.chain_patterns       Top tool chain patterns by total length
 ```
 
 ## Data & Privacy

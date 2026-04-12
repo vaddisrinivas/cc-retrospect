@@ -126,6 +126,14 @@ class StyleConfig(BaseModel):
     template_path: str | None = None
 
 
+class MagicCreateConfig(BaseModel):
+    """Configuration for Magic Create script generation."""
+    save_dir: Path = Path.home() / ".claude" / "plugins" / "generated_scripts"
+    model: str = ""  # empty = use claude -p default
+    timeout_seconds: int = 120
+    max_calls: int = 60
+
+
 class Config(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=str(Path.home() / ".cc-retrospect" / "config.env"),
@@ -142,6 +150,7 @@ class Config(BaseSettings):
     budget: BudgetConfig = BudgetConfig()
     scripts: ScriptsConfig = ScriptsConfig()
     style: StyleConfig = StyleConfig()
+    magic_create: MagicCreateConfig = MagicCreateConfig()
     project_overrides: dict[str, ProjectOverride] = {}
     data_dir: Path = Path.home() / ".cc-retrospect"
     claude_dir: Path = Path.home() / ".claude"

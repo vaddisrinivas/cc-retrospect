@@ -115,6 +115,15 @@ HINTS__SESSION_START=true
     ["Read", 5],
     ["Bash", 3]
   ],
+  "tool_calls": [
+    {
+      "name": "Bash",
+      "input_summary": "{\"command\": \"make test\"}",
+      "output_snippet": "23 passed",
+      "is_error": false,
+      "ts": "2026-04-08T14:35:00Z"
+    }
+  ],
   "frustration_count": 2,
   "subagent_count": 1,
   "webfetch_domains": {"github.com": 3},

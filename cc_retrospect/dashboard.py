@@ -423,6 +423,15 @@ def _build_dashboard_data(config: Config | None = None, days: int = 30) -> str:
                 daily_model_cost[day][m] += c
     daily_model_cost_serializable = {day: dict(models) for day, models in sorted(daily_model_cost.items())}
 
+    # ── Tool chain patterns ────────────────────────────────────────────
+    chain_patterns: dict[str, int] = {}
+    chain_total = 0
+    for s in sessions:
+        for tool, length in (s.tool_chains or []):
+            chain_patterns[tool] = chain_patterns.get(tool, 0) + length
+            chain_total += length
+    chain_top = sorted(chain_patterns.items(), key=lambda x: -x[1])[:10]
+
     data = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "state": state,
@@ -442,6 +451,8 @@ def _build_dashboard_data(config: Config | None = None, days: int = 30) -> str:
         "grade_streak": grade_streak,
         "wow_deltas": wow_deltas,
         "daily_model_cost": daily_model_cost_serializable,
+        "chain_patterns": chain_top,
+        "chain_total": chain_total,
     }
 
     data_json = json.dumps(data, default=str)

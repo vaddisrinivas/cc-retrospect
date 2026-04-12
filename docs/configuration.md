@@ -37,6 +37,24 @@ HINTS__WASTE_ON_STOP=true
 HINTS__AUTO_LEARN=true
 ```
 
+## Magic Create
+
+Controls the dashboard's AI-powered script generator:
+
+```env
+# Directory where generated scripts are saved (default: ~/.claude/plugins/generated_scripts)
+MAGIC_CREATE__SAVE_DIR=~/.claude/plugins/generated_scripts
+
+# Model for script generation — empty = use claude -p default
+MAGIC_CREATE__MODEL=claude-sonnet-4-6
+
+# Max seconds to wait for Claude to generate the script
+MAGIC_CREATE__TIMEOUT_SECONDS=120
+
+# Max tool calls to include in the generation prompt
+MAGIC_CREATE__MAX_CALLS=60
+```
+
 Run `/cc-retrospect:config` to verify your overrides are loading. See `scripts/default_config.env` for the full reference with all available keys.
 
 ## Verify config

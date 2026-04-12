@@ -12,7 +12,7 @@
 
 Claude Code doesn't show what you're spending. No cost dashboard, no warning at 300 tool calls, no signal you used Opus for a task Sonnet could handle. cc-retrospect fixes that.
 
-> **v3.0.0-rc** — Tool call history browser, Magic Create script generator, STYLE.md live sync, chain pattern analysis, 5 themes, command palette.
+> **v3.0.0-rc3** — Tool call history browser, Magic Create script generator, STYLE.md live sync, chain pattern analysis, 5 themes, command palette.
 
 ---
 

@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Proactive Claude Code guardian: intercepts waste in real-time, nudges compact, injects tips, tracks costs. Dashboard with tool call browser, chain patterns, STYLE.md sync, and Magic Create script generator. Pure Python, extensible.",
-    "version": "3.0.0rc2"
+    "version": "3.0.0rc3"
   },
   "plugins": [
     {

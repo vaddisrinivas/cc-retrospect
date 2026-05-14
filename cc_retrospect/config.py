@@ -1,6 +1,7 @@
 """cc-retrospect configuration models."""
 from __future__ import annotations
 
+from typing import Any, cast
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -172,10 +173,16 @@ class Config(BaseSettings):
 def load_config(config_path: Path | None = None) -> Config:
     """Load config from optional path, or from default ~/.cc-retrospect/config.env."""
     if config_path and Path(config_path).exists():
-        return Config(_env_file=str(config_path))
+        return _config_with_env_file(str(config_path))
     # Let pydantic use the default env_file from model_config
     return Config()
 
 
 def default_config() -> Config:
-    return Config(_env_file=None)
+    return _config_with_env_file(None)
+
+
+def _config_with_env_file(env_file: str | None) -> Config:
+    """Instantiate BaseSettings with pydantic-settings runtime-only _env_file."""
+    config_cls = cast(Any, Config)
+    return config_cls(_env_file=env_file)

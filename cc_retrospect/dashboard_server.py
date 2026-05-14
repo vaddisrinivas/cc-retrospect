@@ -30,9 +30,9 @@ logger = logging.getLogger("cc_retrospect.server")
 
 
 class _Handler(BaseHTTPRequestHandler):
-    def log_message(self, fmt, *args):
+    def log_message(self, format: str, *args: object) -> None:
         if os.environ.get("CC_RETROSPECT_SERVER_LOG"):
-            logger.info(fmt, *args)
+            logger.info(format, *args)
 
     def do_GET(self):
         p = urlparse(self.path).path
@@ -565,7 +565,7 @@ Respond with ONLY a JSON object — no markdown, no explanation:
         data = path.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", len(data))
+        self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-cache")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
@@ -575,7 +575,7 @@ Respond with ONLY a JSON object — no markdown, no explanation:
         body = json.dumps(payload).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", len(body))
+        self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()

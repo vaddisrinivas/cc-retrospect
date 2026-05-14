@@ -66,6 +66,23 @@ class TestGenerateDashboard:
         data = _gen(dashboard_config, sessions)
         assert data["cost_by_day"].get(today) == 13.0
 
+    def test_diary_days_aggregation(self, dashboard_config):
+        now = datetime.now(timezone.utc)
+        today = now.strftime("%Y-%m-%d")
+        sessions = [
+            make_summary(session_id="s1", start_ts=f"{today}T10:00:00Z", end_ts=f"{today}T11:00:00Z",
+                         total_cost=5.0, tool_counts={"Read": 4, "Bash": 2}, frustration_count=1),
+            make_summary(session_id="s2", start_ts=f"{today}T14:00:00Z", end_ts=f"{today}T15:00:00Z",
+                         total_cost=8.0, tool_counts={"Read": 1, "Edit": 3}, subagent_count=2),
+        ]
+        data = _gen(dashboard_config, sessions)
+        day = data["diary_days"][today]
+        assert day["session_count"] == 2
+        assert day["cost"] == 13.0
+        assert day["frustrations"] == 1
+        assert day["subagents"] == 2
+        assert day["notes"]
+
     def test_error_fallback_returns_valid_structure(self, dashboard_config):
         """When _build_dashboard_data fails, generate_dashboard returns safe fallback."""
         from cc_retrospect.dashboard import generate_dashboard

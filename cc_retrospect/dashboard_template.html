@@ -441,10 +441,76 @@
     }
     .action-chip.warning { border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.05); }
     .action-chip.error { border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.05); }
-    .action-chip.info { border-color: rgba(59,130,246,0.25); background: rgba(59,130,246,0.05); }
-    .chip-savings { font-weight: 600; color: var(--green); font-size: 10px; }
+	    .action-chip.info { border-color: rgba(59,130,246,0.25); background: rgba(59,130,246,0.05); }
+	    .chip-savings { font-weight: 600; color: var(--green); font-size: 10px; }
 
-    /* ── WOW BADGES ───────────────────── */
+	    /* ── AGENT DIARY ──────────────────── */
+	    .diary-layout { display: flex; flex-direction: column; gap: 12px; }
+	    .diary-calendar-card {
+	      padding: 20px !important; overflow: visible;
+	      background:
+	        linear-gradient(145deg, rgba(255,92,138,0.08), rgba(59,130,246,0.08) 45%, rgba(16,185,129,0.06)),
+	        var(--glass);
+	      border-color: rgba(255,255,255,0.1);
+	      box-shadow: 0 18px 60px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
+	    }
+	    .diary-notes-card { padding: 18px !important; }
+	    .diary-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; }
+	    .diary-month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+	    .diary-dow { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1.2px; text-align: center; font-weight: 800; padding: 0 0 4px; opacity: 0.75; }
+	    .diary-day {
+	      --day-a: var(--accent); --day-b: var(--cyan); --day-bg: rgba(255,255,255,0.025);
+	      min-height: 108px; border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-sm);
+	      background: var(--day-bg); padding: 10px; display: flex; flex-direction: column; gap: 7px;
+	      position: relative; overflow: hidden; transition: border-color 0.18s, background 0.18s, transform 0.18s, box-shadow 0.18s;
+	    }
+	    .diary-day::before {
+	      content: ''; position: absolute; left: 8px; right: 8px; top: 7px; height: 3px; border-radius: 3px;
+	      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent); opacity: 0.45;
+	    }
+	    .diary-day.has-data {
+	      cursor: pointer;
+	      background:
+	        linear-gradient(150deg, color-mix(in srgb, var(--day-a) 18%, transparent), color-mix(in srgb, var(--day-b) 12%, transparent)),
+	        rgba(255,255,255,0.035);
+	      box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+	    }
+	    .diary-day.has-data::before { background: linear-gradient(90deg, var(--day-a), var(--day-b)); opacity: 1; }
+	    .diary-day.has-data:hover { border-color: color-mix(in srgb, var(--day-a) 55%, white); transform: translateY(-3px); box-shadow: 0 18px 34px rgba(0,0,0,0.24), 0 0 22px color-mix(in srgb, var(--day-a) 20%, transparent); }
+	    .diary-day.active { border-color: var(--day-a); box-shadow: 0 20px 42px rgba(0,0,0,0.28), 0 0 0 1px color-mix(in srgb, var(--day-a) 40%, transparent), 0 0 34px color-mix(in srgb, var(--day-b) 18%, transparent); }
+	    .diary-day.level-1 { --day-a: #06b6d4; --day-b: #10b981; }
+	    .diary-day.level-2 { --day-a: #3b82f6; --day-b: #8b5cf6; }
+	    .diary-day.level-3 { --day-a: #f59e0b; --day-b: #ef4444; }
+	    .diary-day.level-4 { --day-a: #ff5c8a; --day-b: #f97316; }
+	    .diary-day-num-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-top: 4px; }
+	    .diary-day-num { font-family: var(--font-mono); font-size: 20px; font-weight: 800; line-height: 1; color: var(--text); letter-spacing: -0.5px; }
+	    .diary-day-cost { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--day-b); white-space: nowrap; }
+	    .diary-day.empty-slot { opacity: 0; pointer-events: none; }
+	    .diary-mini { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
+	    .diary-pill { font-family: var(--font-mono); font-size: 10px; color: var(--text); background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 2px 6px; font-weight: 700; }
+	    .diary-note-hero {
+	      display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; padding: 14px;
+	      border-radius: var(--radius-sm);
+	      background: linear-gradient(135deg, rgba(255,92,138,0.1), rgba(59,130,246,0.1) 50%, rgba(16,185,129,0.08));
+	      border: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;
+	    }
+	    @media(max-width:800px) { .diary-note-hero { grid-template-columns: 1fr; } }
+	    .diary-note-title { font-size: 22px; font-weight: 800; letter-spacing: -0.6px; color: var(--text); }
+	    .diary-note-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+	    .diary-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+	    .diary-metric { padding: 8px 9px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.05); }
+	    .diary-metric-val { font-family: var(--font-mono); font-size: 15px; font-weight: 800; color: var(--text); }
+	    .diary-metric-lbl { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; margin-top: 1px; }
+	    .diary-note-list { display: flex; flex-direction: column; gap: 7px; margin: 12px 0; }
+	    .diary-note { font-size: 12px; color: var(--text-secondary); line-height: 1.5; padding: 9px 11px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.04); }
+	    .diary-session-list { max-height: 460px; overflow-y: auto; padding-right: 4px; }
+	    .diary-session { padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.04); }
+	    .diary-session-top { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+	    .diary-session-name { color: var(--text); font-size: 12px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	    .diary-session-meta { font-family: var(--font-mono); font-size: 10px; color: var(--muted); white-space: nowrap; }
+	    .diary-session-note { font-size: 11px; color: var(--text-secondary); margin-top: 4px; line-height: 1.45; }
+
+	    /* ── WOW BADGES ───────────────────── */
     .wow-badge {
       display: inline-flex; flex-direction: column; align-items: center;
       padding: 5px 12px; background: rgba(255,255,255,0.03); border-radius: 8px; margin: 3px; min-width: 70px;
@@ -650,12 +716,15 @@
         <div class="nav-item active" data-section="sec-home" onclick="scrollToSection(this)">
           <span class="nav-icon">&#9889;</span><span class="nav-label">Overview</span>
         </div>
-        <div class="nav-item" data-section="sec-sessions" onclick="scrollToSection(this)">
-          <span class="nav-icon">&#128202;</span><span class="nav-label">Sessions</span>
-        </div>
-        <div class="nav-item" data-section="sec-heatmap" onclick="scrollToSection(this)">
-          <span class="nav-icon">&#128293;</span><span class="nav-label">Analytics</span>
-        </div>
+	        <div class="nav-item" data-section="sec-sessions" onclick="scrollToSection(this)">
+	          <span class="nav-icon">&#128202;</span><span class="nav-label">Sessions</span>
+	        </div>
+	        <div class="nav-item" data-section="sec-diary" onclick="scrollToSection(this)">
+	          <span class="nav-icon">&#128197;</span><span class="nav-label">Agent Diary</span>
+	        </div>
+	        <div class="nav-item" data-section="sec-heatmap" onclick="scrollToSection(this)">
+	          <span class="nav-icon">&#128293;</span><span class="nav-label">Analytics</span>
+	        </div>
         <div class="nav-item" data-section="sec-trends" onclick="scrollToSection(this)">
           <span class="nav-icon">&#128200;</span><span class="nav-label">Trends</span>
         </div>
@@ -819,12 +888,30 @@
               <tbody id="sessions"></tbody>
             </table>
           </div>
-          <div style="text-align:center"><button id="sess-more" class="btn-show-all" onclick="showAllSessions()">Show all</button></div>
-        </div>
-      </div>
+	          <div style="text-align:center"><button id="sess-more" class="btn-show-all" onclick="showAllSessions()">Show all</button></div>
+	        </div>
+	      </div>
 
-      <!-- ══ ANALYTICS ════════════════════════════ -->
-      <div class="section reveal" id="sec-heatmap" style="margin-top:12px">
+	      <!-- ══ AGENT DIARY ═══════════════════════ -->
+	      <div class="section reveal" id="sec-diary" style="margin-top:12px">
+	        <div class="section-title">Agent Diary</div>
+	        <div class="diary-layout">
+	          <div class="glass diary-calendar-card">
+	            <div class="diary-head">
+	              <div class="card-title" style="margin:0"><span class="dot" style="background:var(--cyan);box-shadow:0 0 6px var(--cyan-glow)"></span>Calendar</div>
+	              <select id="diary-month" class="select-input" onchange="setDiaryMonth(this.value)"></select>
+	            </div>
+	            <div id="diary-calendar"></div>
+	          </div>
+	          <div class="glass diary-notes-card">
+	            <div class="card-title"><span class="dot" style="background:var(--green);box-shadow:0 0 6px var(--green-glow)"></span>Agent Notes</div>
+	            <div id="diary-notes"></div>
+	          </div>
+	        </div>
+	      </div>
+
+	      <!-- ══ ANALYTICS ════════════════════════════ -->
+	      <div class="section reveal" id="sec-heatmap" style="margin-top:12px">
         <div class="section-title">Analytics</div>
         <div class="glass" style="padding:14px 16px;margin-bottom:10px">
           <div class="card-title"><span class="dot" style="background:var(--cyan);box-shadow:0 0 6px var(--cyan-glow)"></span>Activity Heatmap</div>
@@ -1179,9 +1266,10 @@
     /* ── UTILS ──────────────────────────── */
     const fmt = n => '$' + (+n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     const fmtK = n => n >= 1000 ? '$' + (n / 1000).toFixed(1) + 'k' : '$' + (+n || 0).toFixed(0);
-    const fmtTok = n => n >= 1e9 ? (n / 1e9).toFixed(1) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(0) + 'k' : String(n || 0);
-    const proj = p => (p || '').replace(/^-Users-[^-]+-Projects-/, '').replace(/^-Users-[^-]+-/, '~').replace(/^-/, '') || '?';
-    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+	    const fmtTok = n => n >= 1e9 ? (n / 1e9).toFixed(1) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(0) + 'k' : String(n || 0);
+	    const proj = p => (p || '').replace(/^-Users-[^-]+-Projects-/, '').replace(/^-Users-[^-]+-/, '~').replace(/^-/, '') || '?';
+	    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+	    const escapeHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     function grade(s) {
       if (s.duration_minutes > 180 || s.subagent_count > 15 || s.total_cost > 100 || s.frustration_count > 10) return 'D';
@@ -1576,11 +1664,136 @@
       listEl.innerHTML = shown.length ? shown.map(sessionRowHTML).join('') : '<tr><td colspan="7"><div class="empty">No sessions match filter</div></td></tr>';
       if (countEl) countEl.textContent = `${shown.length} of ${total}`;
       if (moreBtn) moreBtn.style.display = (total > 50 && !_showAll) ? 'inline-block' : 'none';
-    }
-    function showAllSessions() { _showAll = true; renderSessions(); }
-    renderSessions();
+	    }
+	    function showAllSessions() { _showAll = true; renderSessions(); }
+	    renderSessions();
 
-    /* ── COMPACTIONS ────────────────────── */
+	    /* ── AGENT DIARY ───────────────────── */
+	    let _diaryMonth = null;
+	    let _diarySelected = null;
+
+	    function diaryMonths() {
+	      const diary = D.diary_days || {};
+	      return [...new Set(Object.keys(diary).map(d => d.slice(0, 7)))].sort().reverse();
+	    }
+
+	    function setDiaryMonth(month) {
+	      _diaryMonth = month;
+	      const days = Object.keys(D.diary_days || {}).filter(d => d.startsWith(month)).sort().reverse();
+	      _diarySelected = days[0] || null;
+	      renderDiaryCalendar();
+	      renderDiaryNotes();
+	    }
+
+	    function selectDiaryDay(day) {
+	      _diarySelected = day;
+	      renderDiaryCalendar();
+	      renderDiaryNotes();
+	    }
+
+	    function renderDiaryCalendar() {
+	      const el = document.getElementById('diary-calendar');
+	      if (!el) return;
+	      const diary = D.diary_days || {};
+	      const months = diaryMonths();
+	      const monthSelect = document.getElementById('diary-month');
+	      if (!months.length) {
+	        el.innerHTML = '<div class="empty">No diary data yet. Sessions will appear here after the dashboard reloads.</div>';
+	        if (monthSelect) monthSelect.innerHTML = '';
+	        return;
+	      }
+	      if (!_diaryMonth || !months.includes(_diaryMonth)) _diaryMonth = months[0];
+	      if (!_diarySelected || !_diarySelected.startsWith(_diaryMonth)) {
+	        const days = Object.keys(diary).filter(d => d.startsWith(_diaryMonth)).sort().reverse();
+	        _diarySelected = days[0] || null;
+	      }
+	      if (monthSelect) {
+	        monthSelect.innerHTML = months.map(m => `<option value="${m}"${m === _diaryMonth ? ' selected' : ''}>${m}</option>`).join('');
+	      }
+	      const [year, month] = _diaryMonth.split('-').map(Number);
+	      const first = new Date(Date.UTC(year, month - 1, 1));
+	      const pad = (first.getUTCDay() + 6) % 7;
+	      const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+	      const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+	      let html = `<div class="diary-month">${names.map(n => `<div class="diary-dow">${n}</div>`).join('')}`;
+	      for (let i = 0; i < pad; i++) html += '<div class="diary-day empty-slot"></div>';
+	      for (let day = 1; day <= daysInMonth; day++) {
+	        const key = `${_diaryMonth}-${String(day).padStart(2, '0')}`;
+	        const d = diary[key];
+	        const active = key === _diarySelected;
+	        if (d) {
+	          const level = (d.cost || 0) >= 300 || (d.session_count || 0) >= 100 ? 4
+	            : (d.cost || 0) >= 100 || (d.session_count || 0) >= 40 ? 3
+	            : (d.cost || 0) >= 25 || (d.session_count || 0) >= 10 ? 2
+	            : 1;
+	          html += `<div class="diary-day has-data level-${level}${active ? ' active' : ''}" onclick="selectDiaryDay('${key}')">
+	            <div class="diary-day-num-row">
+	              <div class="diary-day-num">${day}</div>
+	              <div class="diary-day-cost">${fmt(d.cost || 0)}</div>
+	            </div>
+	            <div class="diary-mini">
+	              <span class="diary-pill">${d.session_count || 0} sess</span>
+	              <span class="diary-pill">${Math.round(d.duration_minutes || 0)}m</span>
+	              ${(d.frustrations || 0) ? `<span class="diary-pill" style="color:var(--red)">${d.frustrations} frust</span>` : ''}
+	            </div>
+	          </div>`;
+	        } else {
+	          html += `<div class="diary-day"><div class="diary-day-num" style="color:var(--dim)">${day}</div></div>`;
+	        }
+	      }
+	      html += '</div>';
+	      el.innerHTML = html;
+	    }
+
+	    function renderDiaryNotes() {
+	      const el = document.getElementById('diary-notes');
+	      if (!el) return;
+	      const day = (D.diary_days || {})[_diarySelected];
+	      if (!day) {
+	        el.innerHTML = '<div class="empty">Pick a day with sessions to read agent notes.</div>';
+	        return;
+	      }
+	      const projects = (day.top_projects || []).map(([p, c]) => `<span class="tool-tag">${escapeHtml(p)} x${c}</span>`).join('');
+	      const tools = (day.top_tools || []).map(([t, c]) => `<span class="tool-tag">${escapeHtml(t)} x${c}</span>`).join('');
+	      const notes = (day.notes || []).map(n => `<div class="diary-note">${escapeHtml(n)}</div>`).join('');
+	      const metrics = [
+	        ['Sessions', day.session_count || 0],
+	        ['Cost', fmt(day.cost || 0)],
+	        ['Time', `${Math.round(day.duration_minutes || 0)}m`],
+	        ['Frust', day.frustrations || 0],
+	      ].map(([label, value]) => `<div class="diary-metric">
+	        <div class="diary-metric-val">${escapeHtml(String(value))}</div>
+	        <div class="diary-metric-lbl">${escapeHtml(label)}</div>
+	      </div>`).join('');
+	      const sessions = (day.sessions || []).map(s => `<div class="diary-session">
+	        <div class="diary-session-top">
+	          <div style="display:flex;align-items:center;gap:8px;min-width:0">
+	            <span class="grade-dot grade-dot-${escapeHtml(s.grade || 'A')}"></span>
+	            <span class="diary-session-name">${escapeHtml(s.project || 'unknown')}</span>
+	          </div>
+	          <span class="diary-session-meta">${escapeHtml(s.time || '--:--')} · ${fmt(s.cost || 0)} · ${Math.round(s.duration_minutes || 0)}m</span>
+	        </div>
+	        <div class="diary-session-note">${escapeHtml(s.note || '')}</div>
+	      </div>`).join('');
+	      el.innerHTML = `
+	        <div class="diary-note-hero">
+	          <div>
+	            <div class="diary-note-title">${escapeHtml(_diarySelected)}</div>
+	            <div class="diary-note-sub">${escapeHtml(day.headline || '')} · ${day.messages || 0} messages · ${day.subagents || 0} subagents</div>
+	            ${projects ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:12px">${projects}</div>` : ''}
+	          </div>
+	          <div class="diary-metrics">${metrics}</div>
+	        </div>
+	        <div class="diary-note-list">${notes}</div>
+	        ${tools ? `<div class="card-title" style="margin-top:12px;margin-bottom:6px">Top Tools</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">${tools}</div>` : ''}
+	        <div class="card-title" style="margin-top:12px;margin-bottom:4px">Session Trail</div>
+	        <div class="diary-session-list">${sessions || '<div class="empty">No session trail</div>'}</div>`;
+	    }
+
+	    renderDiaryCalendar();
+	    renderDiaryNotes();
+
+	    /* ── COMPACTIONS ────────────────────── */
     (function() {
       const ev = D.compactions || [];
       if (!ev.length) { document.getElementById('compactions').innerHTML = '<div class="empty">No compaction events yet</div>'; return; }
@@ -2315,12 +2528,13 @@
 
     /* ── COMMAND PALETTE ─────────────────── */
     const CMD_ACTIONS = [
-      { icon: '&#9889;', label: 'Home', hint: '1', action: () => document.getElementById('sec-home').scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '&#128202;', label: 'Sessions', hint: '2', action: () => document.getElementById('sec-sessions').scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '&#128269;', label: 'Compare', hint: '3', action: () => document.getElementById('sec-compare').scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '&#129302;', label: 'AI Insights', hint: '4', action: () => document.getElementById('sec-insights').scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '&#9881;', label: 'Config', hint: '5', action: () => document.getElementById('sec-config').scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '&#128100;', label: 'Profile', hint: '6', action: () => document.getElementById('sec-profile').scrollIntoView({ behavior: 'smooth' }) },
+	      { icon: '&#9889;', label: 'Home', hint: '1', action: () => document.getElementById('sec-home').scrollIntoView({ behavior: 'smooth' }) },
+	      { icon: '&#128202;', label: 'Sessions', hint: '2', action: () => document.getElementById('sec-sessions').scrollIntoView({ behavior: 'smooth' }) },
+	      { icon: '&#128197;', label: 'Agent Diary', hint: '3', action: () => document.getElementById('sec-diary').scrollIntoView({ behavior: 'smooth' }) },
+	      { icon: '&#128269;', label: 'Compare', hint: '4', action: () => document.getElementById('sec-compare').scrollIntoView({ behavior: 'smooth' }) },
+	      { icon: '&#129302;', label: 'AI Insights', hint: '5', action: () => document.getElementById('sec-insights').scrollIntoView({ behavior: 'smooth' }) },
+	      { icon: '&#9881;', label: 'Config', hint: '6', action: () => document.getElementById('sec-config').scrollIntoView({ behavior: 'smooth' }) },
+	      { icon: '&#128100;', label: 'Profile', hint: '', action: () => document.getElementById('sec-profile').scrollIntoView({ behavior: 'smooth' }) },
       { icon: '&#128200;', label: 'Trends', hint: '', action: () => document.getElementById('sec-trends').scrollIntoView({ behavior: 'smooth' }) },
       { icon: '&#128221;', label: 'STYLE.md', hint: '7', action: () => document.getElementById('sec-style').scrollIntoView({ behavior: 'smooth' }) },
       { icon: '&#128279;', label: 'Tool Chains', hint: '8', action: () => document.getElementById('sec-chains').scrollIntoView({ behavior: 'smooth' }) },
@@ -2399,8 +2613,8 @@
       if (e.key === 'd') { cycleTheme(); return; }
       if (e.key === 'r') { doReload(); return; }
       if (e.key === '/') { e.preventDefault(); document.getElementById('sess-search')?.focus(); return; }
-      if (/^[1-6]$/.test(e.key)) {
-        const sections = ['sec-home', 'sec-sessions', 'sec-compare', 'sec-insights', 'sec-config', 'sec-profile'];
+	      if (/^[1-6]$/.test(e.key)) {
+	        const sections = ['sec-home', 'sec-sessions', 'sec-diary', 'sec-compare', 'sec-insights', 'sec-config'];
         const el = document.getElementById(sections[+e.key - 1]);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;

@@ -21,7 +21,7 @@ class CostAnalyzer:
         if not sessions: return AnalysisResult(title="Cost Analysis", sections=[Section(header="No data", rows=[("Sessions", "0")])])
         total = sum(s.total_cost for s in sessions)
         proj_costs = _group(sessions, lambda s: display_project(s.project))
-        model_costs: Counter = Counter()
+        model_costs: defaultdict[str, float] = defaultdict(float)
         for s in sessions:
             for m, c in s.model_breakdown.items(): model_costs[m] += c
         day_costs = _group(sessions, lambda s: s.start_ts[:10] if s.start_ts else "")

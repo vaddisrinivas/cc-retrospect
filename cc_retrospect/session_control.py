@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 import subprocess
-import sys
 
 logger = logging.getLogger("cc_retrospect")
 

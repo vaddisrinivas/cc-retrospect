@@ -49,7 +49,7 @@ def generate_dashboard(config: Config | None = None, days: int = 30) -> str:
             "state": {}, "sessions": [], "trends": [], "compactions": [],
             "budget_tiers": [], "days": days, "reports": [],
             "tool_usage": {}, "hourly_activity": [0]*24, "cost_by_day": {},
-            "model_recommendation": {},
+            "model_recommendation": {}, "diary_days": {},
         }, default=str)
 
 
@@ -57,7 +57,7 @@ def _build_dashboard_data(config: Config | None = None, days: int = 30) -> str:
     """Build dashboard data JSON string."""
     config = config or load_config()
 
-    from cc_retrospect.utils import _filter_sessions
+    from cc_retrospect.utils import _filter_sessions, _fmt_cost
     all_sessions_unfiltered = load_all_sessions(config)
     all_sessions = _filter_sessions(all_sessions_unfiltered, days=days, config=config)
     # Sort by date descending and exclude noise
@@ -432,6 +432,78 @@ def _build_dashboard_data(config: Config | None = None, days: int = 30) -> str:
             chain_total += length
     chain_top = sorted(chain_patterns.items(), key=lambda x: -x[1])[:10]
 
+    # Daily agent diary: deterministic notes from session facts.
+    diary_days: dict[str, dict] = {}
+    for s in sessions:
+        day = (s.start_ts or "")[:10]
+        if not day:
+            continue
+        entry = diary_days.setdefault(day, {
+            "date": day,
+            "session_count": 0,
+            "cost": 0.0,
+            "duration_minutes": 0.0,
+            "messages": 0,
+            "frustrations": 0,
+            "subagents": 0,
+            "projects": {},
+            "tools": {},
+            "sessions": [],
+            "notes": [],
+        })
+        entry["session_count"] += 1
+        entry["cost"] += s.total_cost
+        entry["duration_minutes"] += s.duration_minutes
+        entry["messages"] += s.message_count
+        entry["frustrations"] += s.frustration_count
+        entry["subagents"] += s.subagent_count
+        clean_project = _clean_proj(s.project)
+        entry["projects"][clean_project] = entry["projects"].get(clean_project, 0) + 1
+        for tool, count in (s.tool_counts or {}).items():
+            entry["tools"][tool] = entry["tools"].get(tool, 0) + count
+        top_tools = sorted((s.tool_counts or {}).items(), key=lambda x: -x[1])[:3]
+        session_note_bits = []
+        if top_tools:
+            session_note_bits.append("Used " + ", ".join(f"{tool} x{count}" for tool, count in top_tools))
+        if s.frustration_count:
+            session_note_bits.append(f"{s.frustration_count} frustration signals")
+        if s.subagent_count:
+            session_note_bits.append(f"{s.subagent_count} subagents")
+        entry["sessions"].append({
+            "session_id": s.session_id,
+            "time": (s.start_ts or "")[11:16],
+            "project": clean_project,
+            "cost": round(s.total_cost, 2),
+            "duration_minutes": round(s.duration_minutes),
+            "messages": s.message_count,
+            "grade": _grade_session(s),
+            "note": "; ".join(session_note_bits) or "Quiet session with no notable waste signals",
+        })
+
+    for entry in diary_days.values():
+        entry["cost"] = round(entry["cost"], 2)
+        entry["duration_minutes"] = round(entry["duration_minutes"])
+        top_projects = sorted(entry["projects"].items(), key=lambda x: -x[1])[:4]
+        top_tools = sorted(entry["tools"].items(), key=lambda x: -x[1])[:5]
+        entry["top_projects"] = top_projects
+        entry["top_tools"] = top_tools
+        notes = []
+        if top_projects:
+            notes.append("Worked mostly in " + ", ".join(project for project, _ in top_projects) + ".")
+        if top_tools:
+            notes.append("Tool trail: " + ", ".join(f"{tool} x{count}" for tool, count in top_tools) + ".")
+        if entry["frustrations"]:
+            notes.append(f"Watchpoint: {entry['frustrations']} frustration signals across the day.")
+        if entry["subagents"]:
+            notes.append(f"Delegation: {entry['subagents']} subagents spawned.")
+        if entry["cost"] > config.budget.warning.threshold:
+            notes.append(f"Budget note: day crossed warning tier at {_fmt_cost(entry['cost'])}.")
+        if not notes:
+            notes.append("Clean day: no major waste or frustration signal.")
+        entry["notes"] = notes
+        entry["headline"] = f"{entry['session_count']} sessions, {_fmt_cost(entry['cost'])}, {entry['duration_minutes']}m total"
+        entry["sessions"].sort(key=lambda x: x.get("time", ""), reverse=True)
+
     data = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "state": state,
@@ -453,6 +525,7 @@ def _build_dashboard_data(config: Config | None = None, days: int = 30) -> str:
         "daily_model_cost": daily_model_cost_serializable,
         "chain_patterns": chain_top,
         "chain_total": chain_total,
+        "diary_days": dict(sorted(diary_days.items(), reverse=True)),
     }
 
     data_json = json.dumps(data, default=str)

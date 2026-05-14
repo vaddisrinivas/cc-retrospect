@@ -12,7 +12,7 @@
 
 Claude Code doesn't show what you're spending. No cost dashboard, no warning at 300 tool calls, no signal you used Opus for a task Sonnet could handle. cc-retrospect fixes that.
 
-> **v3.0.0-rc3** — Tool call history browser, Magic Create script generator, STYLE.md live sync, chain pattern analysis, 5 themes, command palette.
+> **v3.0.0-rc4** — Agent Diary calendar view, tool call history browser, Magic Create script generator, STYLE.md live sync, chain pattern analysis, 5 themes, command palette.
 
 ---
 
@@ -66,6 +66,7 @@ Live dashboard at `localhost:7731` — open with `/cc-retrospect:dashboard`.
 | **Week-over-week badges** | Cost, sessions, frustrations, avg duration — % change from last week |
 | **Session table** | Searchable, sortable, filterable by project/grade/model/date |
 | **Session expansion** | Click any row to see full session details inline |
+| **Agent Diary** | Calendar view of daily sessions with generated notes, top projects, top tools, session trail, and spend intensity |
 | **Activity heatmap** | Sessions by hour × day-of-week, click to filter |
 | **Tool usage chart** | Bar chart of tool calls, click any tool to filter sessions |
 | **Frustration tracking** | Word cloud of frustration signals (no, again, ugh, wrong, sigh) |

@@ -82,6 +82,24 @@ class TestGenerateDashboard:
         assert day["frustrations"] == 1
         assert day["subagents"] == 2
         assert day["notes"]
+        assert day["cost_tier"] == "calm"
+        assert day["top_models"]
+        assert day["avoid_tomorrow"]
+        assert day["share_text"].startswith("cc-retrospect Agent Diary")
+        assert data["diary_months"]
+        assert data["diary_weeks"]
+
+    def test_diary_template_v2_controls_present(self):
+        from cc_retrospect.dashboard import DASHBOARD_HTML
+
+        assert 'id="diary-project-filter"' in DASHBOARD_HTML
+        assert 'id="diary-model-filter"' in DASHBOARD_HTML
+        assert 'id="diary-cost-filter"' in DASHBOARD_HTML
+        assert 'id="diary-share-card"' in DASHBOARD_HTML
+        assert "saveDiarySharePng" in DASHBOARD_HTML
+        assert ".reveal { opacity: 1" in DASHBOARD_HTML
+        assert "if (window.gsap" in DASHBOARD_HTML
+        assert "if (window.Chart" in DASHBOARD_HTML
 
     def test_error_fallback_returns_valid_structure(self, dashboard_config):
         """When _build_dashboard_data fails, generate_dashboard returns safe fallback."""

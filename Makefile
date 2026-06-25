@@ -5,7 +5,7 @@ test:
 
 lint:
 	ruff check cc_retrospect/ scripts/ tests/
-	pyright cc_retrospect/ scripts/
+	pyright --pythonpath ./.venv/bin/python cc_retrospect/ scripts/
 
 format:
 	ruff format cc_retrospect/ scripts/ tests/

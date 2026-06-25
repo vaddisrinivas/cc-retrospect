@@ -22,7 +22,7 @@ scripts/dispatch.py
                 ├─ run_waste()
                 ├─ run_health()
                 ├─ run_reset()
-                └─ ... (18 total)
+                └─ ... (24 total)
                     │
                     └─→ _render() ─→ Analyzers
                          │
@@ -34,7 +34,8 @@ scripts/dispatch.py
                               ├─ CompareAnalyzer
                               ├─ SavingsAnalyzer
                               ├─ ModelAnalyzer
-                              └─ TrendAnalyzer
+                              ├─ TrendAnalyzer
+                              └─ WeeklyReviewAnalyzer
 ```
 
 ## Data flow: Session end

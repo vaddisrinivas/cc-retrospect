@@ -389,7 +389,82 @@ class TrendAnalyzer:
         return AnalysisResult(title="Weekly Trends", sections=[Section(header="Last 8 Weeks", rows=rows)], recommendations=recs)
 
 
-_BUILTIN_ANALYZERS = [CostAnalyzer, HabitsAnalyzer, HealthAnalyzer, WasteAnalyzer, TipsAnalyzer, CompareAnalyzer, SavingsAnalyzer, ModelAnalyzer, TrendAnalyzer]
+class WeeklyReviewAnalyzer:
+    name = "weekly"
+    description = "Weekly Agent Review — spend, habits, and concrete rules to add to CLAUDE.md or AGENTS.md"
+
+    def analyze(self, sessions: list[SessionSummary], config: Config) -> AnalysisResult:
+        if not sessions:
+            return AnalysisResult(title="Weekly Agent Review", recommendations=[
+                Recommendation(severity="info", description="No sessions in this window yet.")
+            ])
+
+        sorted_sessions = sorted(sessions, key=lambda s: s.start_ts or "")
+        total_cost = sum(s.total_cost for s in sessions)
+        total_duration = sum(s.duration_minutes for s in sessions)
+        total_messages = sum(s.message_count for s in sessions)
+        total_frustrations = sum(s.frustration_count for s in sessions)
+        total_subagents = sum(s.subagent_count for s in sessions)
+        project_costs = _group(sessions, lambda s: display_project(s.project))
+        tool_counts = _union(sessions, lambda s: s.tool_counts)
+        model_costs: defaultdict[str, float] = defaultdict(float)
+        for s in sessions:
+            for model, cost in s.model_breakdown.items():
+                model_costs[model] += cost
+
+        start = (sorted_sessions[0].start_ts or "")[:10] or "?"
+        end = (sorted_sessions[-1].start_ts or "")[:10] or "?"
+        avg_duration = total_duration / len(sessions) if sessions else 0
+        avg_cost = total_cost / len(sessions) if sessions else 0
+        simple_tools = {"Read", "Edit", "MultiEdit", "Write", "Bash", "Grep", "Glob", "LS"}
+        simple_sessions = sum(1 for s in sessions if s.tool_counts and set(s.tool_counts).issubset(simple_tools))
+        simple_pct = simple_sessions / len(sessions) * 100 if sessions else 0
+        top_project = _top(project_costs, 1)[0][0] if project_costs else "this repo"
+        top_tool = _top(tool_counts, 1)[0][0] if tool_counts else "Read"
+        opus_simple_cost = sum(
+            s.model_breakdown.get("claude-opus-4-6", 0)
+            for s in sessions
+            if s.tool_counts and set(s.tool_counts).issubset(simple_tools)
+        )
+
+        rows = [
+            ("Window", f"{start} -> {end}"),
+            ("Sessions", str(len(sessions))),
+            ("Total spend", _fmt_cost(total_cost)),
+            ("Total time", _fmt_duration(total_duration)),
+            ("Messages", str(total_messages)),
+            ("Avg cost/session", _fmt_cost(avg_cost)),
+            ("Avg duration/session", _fmt_duration(avg_duration)),
+            ("Frustration signals", str(total_frustrations)),
+            ("Subagents", str(total_subagents)),
+        ]
+        sections = [
+            Section(header="Week Summary", rows=rows),
+            Section(header="Top Projects", rows=[(p, _fmt_cost(c)) for p, c in _top(project_costs, 5)]),
+            Section(header="Top Tools", rows=[(t, str(c)) for t, c in _top(tool_counts, 8)]),
+            Section(header="Model Spend", rows=[(m, _fmt_cost(c)) for m, c in _top(model_costs, 5)]),
+        ]
+
+        rules: list[str] = []
+        if opus_simple_cost > 10 or simple_pct >= 60:
+            rules.append(f"For simple Read/Edit/Bash/Grep work in {top_project}, start with `/model sonnet`; reserve Opus for architecture, deep debug, or cross-file reasoning.")
+        if avg_duration > config.thresholds.long_session_minutes or total_messages / max(1, len(sessions)) > config.thresholds.long_session_messages:
+            rules.append(f"Restart or compact before {config.thresholds.long_session_minutes}m or {config.thresholds.long_session_messages} messages; long sessions made the week slower and more expensive.")
+        if total_subagents > config.thresholds.max_subagents_per_session * 2:
+            rules.append("Before spawning Agent, try direct Grep/Glob/Read for targeted lookup; delegate only when the task is separable.")
+        if total_frustrations > config.thresholds.frustration_tip_threshold:
+            rules.append("At the first repeated correction, stop and restate acceptance criteria before continuing edits.")
+        if any("github.com" in d for s in sessions for d in s.webfetch_domains):
+            rules.append("Use `gh` for GitHub issues, PRs, logs, and file reads instead of WebFetch.")
+        if not rules:
+            rules.append(f"Keep the current flow: {top_tool} is the main tool, average session cost is {_fmt_cost(avg_cost)}, and no major weekly waste pattern dominates.")
+
+        sections.append(Section(header="Rules To Add", rows=[(f"Rule {i}", rule) for i, rule in enumerate(rules[:3], 1)]))
+        recs = [Recommendation(severity="info", description=rule) for rule in rules[:3]]
+        return AnalysisResult(title="Weekly Agent Review", sections=sections, recommendations=recs)
+
+
+_BUILTIN_ANALYZERS = [CostAnalyzer, HabitsAnalyzer, HealthAnalyzer, WasteAnalyzer, TipsAnalyzer, CompareAnalyzer, SavingsAnalyzer, ModelAnalyzer, TrendAnalyzer, WeeklyReviewAnalyzer]
 
 
 def get_analyzers(config: Config) -> list:

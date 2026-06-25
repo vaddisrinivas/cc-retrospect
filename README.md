@@ -12,7 +12,11 @@
 
 Claude Code doesn't show what you're spending. No cost dashboard, no warning at 300 tool calls, no signal you used Opus for a task Sonnet could handle. cc-retrospect fixes that.
 
-> **v3.0.0-rc4** — Agent Diary calendar view, tool call history browser, Magic Create script generator, STYLE.md live sync, chain pattern analysis, 5 themes, command palette.
+> **v3.0.0** — Agent Diary v2, Weekly Agent Review, install doctor, tool call history browser, Magic Create script generator, STYLE.md live sync, chain pattern analysis, 5 themes, command palette.
+
+<p align="center">
+  <img src="demo-assets/08-agent-diary.png" alt="Agent Diary calendar and notes" width="800">
+</p>
 
 ---
 
@@ -66,7 +70,7 @@ Live dashboard at `localhost:7731` — open with `/cc-retrospect:dashboard`.
 | **Week-over-week badges** | Cost, sessions, frustrations, avg duration — % change from last week |
 | **Session table** | Searchable, sortable, filterable by project/grade/model/date |
 | **Session expansion** | Click any row to see full session details inline |
-| **Agent Diary** | Calendar view of daily sessions with generated notes, top projects, top tools, session trail, and spend intensity |
+| **Agent Diary v2** | Calendar view of daily sessions with generated notes, filters, week/month summaries, best session, avoid-tomorrow note, share card, top projects/tools/models |
 | **Activity heatmap** | Sessions by hour × day-of-week, click to filter |
 | **Tool usage chart** | Bar chart of tool calls, click any tool to filter sessions |
 | **Frustration tracking** | Word cloud of frustration signals (no, again, ugh, wrong, sigh) |
@@ -75,6 +79,7 @@ Live dashboard at `localhost:7731` — open with `/cc-retrospect:dashboard`.
 | **Period comparison** | Any two date ranges side-by-side with % change on all metrics |
 | **Profile card** | Developer archetype, trait scores, fun facts — export as PNG, animated GIF, or clipboard |
 | **AI insights** | Claude-powered analysis of session patterns (on demand) |
+| **Weekly Agent Review** | Spend/time/habit review with 3 concrete rules to add to `CLAUDE.md` or `AGENTS.md` |
 | **Saved reports** | Timestamped snapshots with open/load buttons |
 | **Intervention badges** | Repetitive chains, oversized prompts flagged with WASTE badges |
 | **Config editor** | Edit `config.env` directly from the dashboard |
@@ -84,7 +89,7 @@ Live dashboard at `localhost:7731` — open with `/cc-retrospect:dashboard`.
 | Feature | Details |
 |---------|---------|
 | **5 themes** | Dark, Light, Nord, Solarized, Cyberpunk — press `d` to cycle |
-| **Command palette** | `⌘K` / `Ctrl+K` — searchable command list with 17 actions |
+| **Command palette** | `⌘K` / `Ctrl+K` — searchable command list for the dashboard |
 | **Keyboard shortcuts** | `1-6` jump sections, `/` search, `r` refresh, `↑↓` navigate, `Enter` expand |
 | **Glass morphism** | Backdrop blur, ambient orbs, fractal noise overlay |
 | **GSAP animations** | ScrollTrigger entrance animations on all sections |
@@ -140,7 +145,10 @@ Select tool calls → Claude generates a reusable script.
 /cc-retrospect:model       Model efficiency analysis
 /cc-retrospect:tips        Context-aware tips
 /cc-retrospect:digest      Yesterday's summary
+/cc-retrospect:weekly      Weekly Agent Review + rules to add
+/cc-retrospect:doctor      Install, hook, dashboard, cache health
 /cc-retrospect:chains      Tool chain pattern analysis
+/cc-retrospect:toolcalls   Browse tool call history
 /cc-retrospect:export      JSON export of all sessions
 /cc-retrospect:learn       Generate STYLE.md from your history
 /cc-retrospect:status      Plugin health check
@@ -246,9 +254,9 @@ cc_retrospect/
   models.py               SessionSummary, AnalysisResult, ToolCall
   parsers.py              JSONL parsing, cost computation
   cache.py                Session cache, atomic writes
-  analyzers.py            9 analyzers
+  analyzers.py            10 analyzers
   hooks.py                7 hooks
-  commands.py             17 commands
+  commands.py             Command entry points
   dashboard.py            Data payload generation
   dashboard_server.py     HTTP daemon on 127.0.0.1:7731
   dashboard_template.html Dashboard UI

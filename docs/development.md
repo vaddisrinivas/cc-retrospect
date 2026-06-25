@@ -21,7 +21,8 @@ Real data tests auto-skip on CI and machines without Claude Code session data.
 ## Lint
 
 ```bash
-pyflakes cc_retrospect/core.py scripts/dispatch.py tests/
+ruff check cc_retrospect/ scripts/ tests/
+pyright --pythonpath ./.venv/bin/python cc_retrospect/ scripts/
 ```
 
 ## Smoke test
@@ -35,21 +36,21 @@ echo '{}' | python3 scripts/dispatch.py stop_hook
 
 ## Adding an analyzer
 
-1. Add the class to `core.py` following the `Analyzer` protocol
-2. Add to `_BUILTIN_ANALYZERS` list
-3. Add `run_<name>()` entry point
-4. Add route in `dispatch.py`
-5. Add `commands/<name>.md`
-6. Add tests
-7. Update dispatch map assertions in `test_proactive.py` and `test_integration.py`
+1. Add the class to `cc_retrospect/analyzers.py` following the `Analyzer` protocol.
+2. Add it to `_BUILTIN_ANALYZERS` when it should appear in full reports.
+3. Add a `run_<name>()` entry point in `cc_retrospect/commands.py`.
+4. Re-export from `cc_retrospect/core.py`.
+5. Add the route in `scripts/dispatch.py`.
+6. Add `commands/<name>.md`.
+7. Add tests and update dispatch map assertions in `test_proactive.py` and `test_integration.py`.
 
 ## Release
 
 Tag and push to trigger the release workflow:
 
 ```bash
-git tag v2.2.0
-git push origin v2.2.0
+git tag v3.0.0
+git push origin v3.0.0
 ```
 
 This runs tests, builds the package, and creates a GitHub release with artifacts.

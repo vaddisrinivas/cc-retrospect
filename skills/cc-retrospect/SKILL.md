@@ -1,6 +1,6 @@
 ---
 name: cc-retrospect
-description: "Hybrid analyzer + AI reasoning for Claude Code sessions. Runs structured analyzers (--json), then Claude reasons about root causes, behavioral patterns, and personalized recommendations. Subcommands: waste, health, savings, model, profile, habits, compare, trends, tips, digest, report, learn, cleanup, export, hints, dashboard."
+description: "Hybrid analyzer + AI reasoning for Claude Code sessions. Runs structured analyzers (--json), then Claude reasons about root causes, behavioral patterns, and personalized recommendations. Subcommands: waste, health, savings, model, profile, habits, compare, trends, tips, digest, weekly, doctor, report, learn, cleanup, export, hints, dashboard, chains, toolcalls."
 user-invocable: true
 allowed-tools: Bash Read Grep Glob
 ---
@@ -23,6 +23,8 @@ Match the first word after `/cc-retrospect`:
 | `savings` | Both | Savings projections + prioritized action plan |
 | `model` | Both | Model efficiency + per-project routing table |
 | `digest` | Both | Daily digest + morning action plan |
+| `weekly` | Both | Weekly Agent Review + rules for CLAUDE.md/AGENTS.md |
+| `doctor` | Data | Install, hook, dashboard, cache health |
 | `profile` | Both | Full behavioral profile + work style analysis |
 | `habits` | Data | Usage patterns — present cleanly |
 | `compare` | Data | Week-over-week — present cleanly |
@@ -34,6 +36,8 @@ Match the first word after `/cc-retrospect`:
 | `export` | Data | JSON export |
 | `hints` | Data | Hint settings |
 | `dashboard` | Data | Open visual dashboard in browser |
+| `chains` | Data | Tool chain patterns |
+| `toolcalls` | Data | Tool call history |
 
 ---
 
@@ -44,7 +48,7 @@ For **data-only** subcommands, run without --json and present output:
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py <subcommand>
 ```
 
-For **hybrid** subcommands (waste, health, savings, model, digest, profile, full), run with --json:
+For **hybrid** subcommands (waste, health, savings, model, digest, weekly, profile, full), run with --json:
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch.py <subcommand> --json
 ```

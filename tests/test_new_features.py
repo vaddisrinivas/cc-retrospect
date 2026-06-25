@@ -6,6 +6,7 @@ import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -246,11 +247,47 @@ class TestRunStatus:
         out = capsys.readouterr().out
         assert "Cached sessions: 1" in out
 
+    def test_status_quiet_by_default(self, config, capsys):
+        from cc_retrospect.core import run_status
+        s = _make_summary()
+        cache = config.data_dir / "sessions.jsonl"
+        cache.write_text("\n".join(s.model_dump_json() for _ in range(51)) + "\n")
+        run_status(config=config)
+        captured = capsys.readouterr()
+        assert "Cached sessions: 51" in captured.out
+        assert "Scanning..." not in captured.err
+
     def test_shows_pydantic_version(self, config, capsys):
         from cc_retrospect.core import run_status
         run_status(config=config)
         out = capsys.readouterr().out
         assert "pydantic:" in out
+        assert "Dashboard:" in out
+        assert "Cache size:" in out
+
+
+class TestRunDoctor:
+    def test_doctor_json(self, config, capsys):
+        from cc_retrospect.core import run_doctor
+
+        run_doctor({"json": True}, config=config)
+        out = capsys.readouterr().out
+        data = json.loads(out)
+        assert data["data_dir"] == str(config.data_dir)
+        assert "dashboard_url" in data
+
+
+class TestRunWeekly:
+    def test_weekly_review_with_sessions(self, config, capsys):
+        from cc_retrospect.core import run_weekly
+
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT12:00:00Z")
+        sessions = [_make_summary(start_ts=now, end_ts=now, total_cost=12.0, duration_minutes=120, message_count=180)]
+        with patch("cc_retrospect.cache.load_all_sessions", return_value=sessions):
+            run_weekly(config=config)
+        out = capsys.readouterr().out
+        assert "Weekly Agent Review" in out
+        assert "Rules To Add" in out
 
 
 # ---------------------------------------------------------------------------

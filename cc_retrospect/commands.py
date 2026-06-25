@@ -4,10 +4,11 @@ from __future__ import annotations
 import json
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from cc_retrospect.config import Config, load_config
 from cc_retrospect.cache import load_all_sessions
-from cc_retrospect.analyzers import get_analyzers, CostAnalyzer, HabitsAnalyzer, HealthAnalyzer, TipsAnalyzer, WasteAnalyzer, CompareAnalyzer, SavingsAnalyzer, ModelAnalyzer, TrendAnalyzer
+from cc_retrospect.analyzers import get_analyzers, CostAnalyzer, HabitsAnalyzer, HealthAnalyzer, TipsAnalyzer, WasteAnalyzer, CompareAnalyzer, SavingsAnalyzer, ModelAnalyzer, TrendAnalyzer, WeeklyReviewAnalyzer
 from cc_retrospect.utils import _render, _fmt_cost, _fmt_tokens, _fmt_duration, display_project, _filter_sessions
 
 
@@ -26,6 +27,66 @@ def _print_progress(count: int, label: str = "items", threshold: int = 50) -> No
     """Print progress message every `threshold` items."""
     if count % threshold == 0 and count > 0:
         print(f"Scanning... {count} {label}", file=sys.stderr)
+
+
+def _format_bytes(size: int) -> str:
+    """Human readable file size."""
+    if size < 1024:
+        return f"{size} B"
+    if size < 1024 * 1024:
+        return f"{size / 1024:.1f} KB"
+    return f"{size / (1024 * 1024):.1f} MB"
+
+
+def _path_status(path: Path) -> str:
+    return "ok" if path.exists() else "missing"
+
+
+def _doctor_snapshot(config: Config) -> dict[str, str | int | bool]:
+    """Collect install and runtime health signals for status/doctor."""
+    root = Path(__file__).resolve().parent.parent
+    hooks_manifest = root / "hooks" / "hooks.json"
+    settings_path = config.claude_dir / "settings.json"
+    cache_path = config.data_dir / "sessions.jsonl"
+    config_path = config.data_dir / "config.env"
+    command_dir = root / "commands"
+    command_files = len(list(command_dir.glob("*.md"))) if command_dir.exists() else 0
+    cache_size = cache_path.stat().st_size if cache_path.exists() else 0
+
+    settings_mentions = 0
+    settings_found = settings_path.exists()
+    if settings_found:
+        try:
+            settings_mentions = settings_path.read_text(encoding="utf-8").count("cc-retrospect")
+        except OSError:
+            settings_mentions = 0
+
+    dashboard_online = False
+    try:
+        from urllib.request import urlopen
+        with urlopen("http://127.0.0.1:7731/api/health", timeout=0.25) as resp:
+            dashboard_online = resp.getcode() == 200
+    except OSError:
+        dashboard_online = False
+
+    return {
+        "data_dir": str(config.data_dir),
+        "data_dir_ok": config.data_dir.exists(),
+        "config_path": str(config_path),
+        "config_found": config_path.exists(),
+        "claude_dir": str(config.claude_dir),
+        "settings_path": str(settings_path),
+        "settings_found": settings_found,
+        "settings_hook_mentions": settings_mentions,
+        "hooks_manifest": str(hooks_manifest),
+        "hooks_manifest_ok": hooks_manifest.exists(),
+        "cache_path": str(cache_path),
+        "cache_size_bytes": cache_size,
+        "cache_size": _format_bytes(cache_size),
+        "command_files": command_files,
+        "dashboard_url": "http://127.0.0.1:7731/",
+        "dashboard_online": dashboard_online,
+    }
 
 
 def run_cost(payload: dict | None = None, *, config: Config | None = None) -> int:
@@ -96,6 +157,13 @@ def run_model_efficiency(payload: dict | None = None, *, config: Config | None =
     return _render(ModelAnalyzer, payload, config=config)
 
 
+def run_weekly(payload: dict | None = None, *, config: Config | None = None) -> int:
+    """Weekly Agent Review: spend, habits, and rules for CLAUDE.md/AGENTS.md."""
+    payload = payload or {}
+    payload.setdefault("days", 7)
+    return _render(WeeklyReviewAnalyzer, payload, config=config)
+
+
 def run_digest(payload: dict | None = None, *, config: Config | None = None) -> int:
     """Daily digest: yesterday's sessions analyzed with savings + model efficiency."""
     from cc_retrospect.hooks import _load_compactions
@@ -164,24 +232,33 @@ def run_status(payload: dict | None = None, *, config: Config | None = None) -> 
 
     payload = payload or {}
     config = config or load_config()
+    doctor = _doctor_snapshot(config)
     lines = ["## cc-retrospect Status", ""]
     # Data dir
     data_exists = config.data_dir.exists()
     lines.append(f"Data directory: {config.data_dir} ({'exists' if data_exists else 'MISSING'})")
+    lines.append(f"Dashboard: {doctor['dashboard_url']} ({'online' if doctor['dashboard_online'] else 'offline'})")
     # Session count
     cache_path = config.data_dir / "sessions.jsonl"
     session_count = 0
     if cache_path.exists():
         for _ in iter_jsonl(cache_path):
             session_count += 1
-            _print_progress(session_count, "sessions")
+            if payload.get("verbose"):
+                _print_progress(session_count, "sessions")
     if session_count == 0:
         lines.append("Cached sessions: No sessions yet")
     else:
         lines.append(f"Cached sessions: {session_count}")
+    lines.append(f"Cache size: {doctor['cache_size']}")
     # Config file
     config_path = config.data_dir / "config.env"
     lines.append(f"Config file: {config_path} ({'found' if config_path.exists() else 'not found (using defaults)'})")
+    lines.append(f"Hook manifest: {doctor['hooks_manifest']} ({_path_status(Path(str(doctor['hooks_manifest'])))})")
+    if doctor["settings_found"]:
+        lines.append(f"Claude settings: {doctor['settings_path']} ({doctor['settings_hook_mentions']} cc-retrospect references)")
+    else:
+        lines.append(f"Claude settings: {doctor['settings_path']} (not found)")
     # Compactions
     comp_path = config.data_dir / "compactions.jsonl"
     comp_count = sum(1 for _ in iter_jsonl(comp_path)) if comp_path.exists() else 0
@@ -208,6 +285,41 @@ def run_status(payload: dict | None = None, *, config: Config | None = None) -> 
         import pydantic_settings; lines.append(f"pydantic-settings: {pydantic_settings.__version__}")
     except ImportError: lines.append("pydantic-settings: NOT INSTALLED")
     lines.append("")
+    print("\n".join(lines))
+    return 0
+
+
+def run_doctor(payload: dict | None = None, *, config: Config | None = None) -> int:
+    """Install doctor — show hook, dashboard, config, cache, and command health."""
+    payload = payload or {}
+    config = config or load_config()
+    snap = _doctor_snapshot(config)
+    if payload.get("json"):
+        print(json.dumps(snap, indent=2, default=str))
+        return 0
+
+    rows = [
+        ("Data dir", f"{snap['data_dir']} ({'ok' if snap['data_dir_ok'] else 'missing'})"),
+        ("Config", f"{snap['config_path']} ({'found' if snap['config_found'] else 'defaults'})"),
+        ("Claude dir", str(snap["claude_dir"])),
+        ("Settings", f"{snap['settings_path']} ({'found' if snap['settings_found'] else 'not found'})"),
+        ("Hook refs", str(snap["settings_hook_mentions"])),
+        ("Hook manifest", f"{snap['hooks_manifest']} ({'ok' if snap['hooks_manifest_ok'] else 'missing'})"),
+        ("Dashboard", f"{snap['dashboard_url']} ({'online' if snap['dashboard_online'] else 'offline'})"),
+        ("Cache", f"{snap['cache_path']} ({snap['cache_size']})"),
+        ("Command files", str(snap["command_files"])),
+    ]
+    lines = ["## cc-retrospect Doctor", "", "| Check | Result |", "|-------|--------|"]
+    lines.extend(f"| {label} | {value} |" for label, value in rows)
+    lines.append("")
+    if not snap["settings_found"]:
+        lines.append("- [~] Claude settings.json not found. If this is a marketplace install, run status from inside Claude Code after install.")
+    elif int(snap["settings_hook_mentions"]) == 0:
+        lines.append("- [~] settings.json has no cc-retrospect hook references. Reinstall or run the installer.")
+    if not snap["dashboard_online"]:
+        lines.append("- [i] Dashboard is offline. Run `/cc-retrospect:dashboard` when you want the local UI.")
+    if snap["hooks_manifest_ok"] and int(snap["command_files"]) >= 20:
+        lines.append("- [i] Local plugin files look present.")
     print("\n".join(lines))
     return 0
 

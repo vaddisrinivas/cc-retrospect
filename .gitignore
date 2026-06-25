@@ -20,3 +20,6 @@ cc_retrospective/
 .claude/LATER.md
 CONVERSATION-REPORT.md
 CLAUDE.local.md
+
+# Orchestry state
+.orchestry

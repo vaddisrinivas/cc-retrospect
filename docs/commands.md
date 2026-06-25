@@ -21,6 +21,7 @@ All commands support `--json` for structured output, `--project NAME` to filter 
 | Command | What it does |
 |---|---|
 | `/cc-retrospect:cost` | Cost by project, model, and time period. What-if Sonnet savings. |
+| `/cc-retrospect:dashboard` | Local dashboard with Agent Diary, analytics, trends, profile card, Magic Create |
 | `/cc-retrospect:habits` | Session lengths, peak hours, tool usage, frustration signals |
 | `/cc-retrospect:health` | Long sessions, subagent overuse, cost velocity, cache hit rate |
 | `/cc-retrospect:waste` | WebFetch to GitHub, tool chains, oversized prompts, model mismatch |
@@ -29,6 +30,10 @@ All commands support `--json` for structured output, `--project NAME` to filter 
 | `/cc-retrospect:savings` | Per-habit savings projections with actual $/month from your data |
 | `/cc-retrospect:model` | Model efficiency — which sessions wasted Opus on simple tasks |
 | `/cc-retrospect:digest` | Yesterday's full digest with model + savings analysis |
+| `/cc-retrospect:weekly` | Weekly Agent Review: spend, habits, and rules to add to CLAUDE.md/AGENTS.md |
+| `/cc-retrospect:doctor` | Install doctor: hooks, dashboard, config, cache, command files |
+| `/cc-retrospect:chains` | Tool chain patterns ranked by frequency and depth |
+| `/cc-retrospect:toolcalls` | Tool call history with tool and error filters |
 | `/cc-retrospect:trends` | Weekly trend tracking. Use `--backfill` to seed from historical data. |
 | `/cc-retrospect:learn` | Analyze your messages, generate STYLE.md + LEARNINGS.md |
 | `/cc-retrospect:report` | Full markdown report saved to `~/.cc-retrospect/reports/` |

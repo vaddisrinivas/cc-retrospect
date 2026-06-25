@@ -48,13 +48,13 @@ from cc_retrospect.cache import (
 from cc_retrospect.analyzers import (
     CostAnalyzer, WasteAnalyzer, HealthAnalyzer, HabitsAnalyzer,
     TipsAnalyzer, CompareAnalyzer, SavingsAnalyzer, ModelAnalyzer,
-    TrendAnalyzer, get_analyzers,
+    TrendAnalyzer, WeeklyReviewAnalyzer, get_analyzers,
 )
 
 from cc_retrospect.commands import (
     run_cost, run_habits, run_health, run_tips, run_waste, run_compare,
-    run_report, run_savings, run_model_efficiency, run_digest, run_hints,
-    run_status, run_export, run_trends, run_reset, run_config, run_uninstall, run_all, run_dashboard,
+    run_report, run_savings, run_model_efficiency, run_digest, run_weekly, run_hints,
+    run_status, run_doctor, run_export, run_trends, run_reset, run_config, run_uninstall, run_all, run_dashboard,
     run_chains, run_toolcalls,
 )
 
@@ -89,11 +89,11 @@ __all__ = [
     # Analyzers
     'CostAnalyzer', 'WasteAnalyzer', 'HealthAnalyzer', 'HabitsAnalyzer',
     'TipsAnalyzer', 'CompareAnalyzer', 'SavingsAnalyzer', 'ModelAnalyzer',
-    'TrendAnalyzer', 'get_analyzers',
+    'TrendAnalyzer', 'WeeklyReviewAnalyzer', 'get_analyzers',
     # Commands
     'run_cost', 'run_habits', 'run_health', 'run_tips', 'run_waste', 'run_compare',
-    'run_report', 'run_savings', 'run_model_efficiency', 'run_digest', 'run_hints',
-    'run_status', 'run_export', 'run_trends', 'run_reset', 'run_config', 'run_uninstall', 'run_all', 'run_dashboard',
+    'run_report', 'run_savings', 'run_model_efficiency', 'run_digest', 'run_weekly', 'run_hints',
+    'run_status', 'run_doctor', 'run_export', 'run_trends', 'run_reset', 'run_config', 'run_uninstall', 'run_all', 'run_dashboard',
     'run_chains', 'run_toolcalls',
     # Hooks
     'run_stop_hook', 'run_session_start_hook',

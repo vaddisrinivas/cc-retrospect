@@ -17,6 +17,8 @@ Usage:
     python3 dispatch.py config [--json]
     python3 dispatch.py trends --backfill
     python3 dispatch.py status
+    python3 dispatch.py doctor
+    python3 dispatch.py weekly
     python3 dispatch.py [--help] [--version]
 """
 from __future__ import annotations
@@ -33,8 +35,8 @@ if str(PLUGIN_ROOT) not in sys.path:
 from cc_retrospect.core import (
     run_cost, run_habits, run_health, run_tips,
     run_report, run_compare, run_waste, run_hints,
-    run_savings, run_model_efficiency, run_digest,
-    run_status, run_export, run_trends, run_learn,
+    run_savings, run_model_efficiency, run_digest, run_weekly,
+    run_status, run_doctor, run_export, run_trends, run_learn,
     run_reset, run_config, run_uninstall, run_all, run_dashboard, run_chains, run_toolcalls,
     run_stop_hook, run_session_start_hook,
     run_pre_tool_use, run_post_tool_use,
@@ -62,7 +64,9 @@ _DISPATCH = {
     "savings": run_savings,
     "model": run_model_efficiency,
     "digest": run_digest,
+    "weekly": run_weekly,
     "status": run_status,
+    "doctor": run_doctor,
     "export": run_export,
     "trends": run_trends,
     "learn": run_learn,
